@@ -2094,17 +2094,67 @@ function startApp() {
 }
 
 function showTitle() {
-    console.log('🏠 タイトル画面表示開始（シンプル版）');
+    console.log('🏠 タイトル画面表示開始（修正版）');
     
     try {
-        // スプラッシュ画面を非表示
+        // 1. 全ての画面要素を確実に非表示
         const splashScreen = document.getElementById('splashScreen');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const ui = document.getElementById('ui');
+        const pauseButton = document.getElementById('pauseButton');
+        
         if (splashScreen) {
             splashScreen.style.display = 'none';
             console.log('✅ スプラッシュ画面非表示');
         }
         
-        // タイトル画面を表示
+        if (pauseScreen) {
+            pauseScreen.style.display = 'none';
+            pauseScreen.classList.add('hidden');
+            console.log('✅ ポーズ画面非表示');
+        }
+        
+        if (ui) {
+            ui.style.display = 'none';
+            console.log('✅ ゲームUI非表示');
+        }
+        
+        if (pauseButton) {
+            pauseButton.style.display = 'none';
+            console.log('✅ ポーズボタン非表示');
+        }
+        
+        // 2. 既存のタッチエリアを完全削除
+        const existingLeftArea = document.getElementById('leftArea');
+        const existingRightArea = document.getElementById('rightArea');
+        const existingJumpArea = document.getElementById('jumpArea');
+        
+        if (existingLeftArea) {
+            existingLeftArea.remove();
+            console.log('✅ 既存leftArea削除');
+        }
+        
+        if (existingRightArea) {
+            existingRightArea.remove();
+            console.log('✅ 既存rightArea削除');
+        }
+        
+        if (existingJumpArea) {
+            existingJumpArea.remove();
+            console.log('✅ 既存jumpArea削除');
+        }
+        
+        // 3. 動的に作成された画面を削除
+        const dynamicScreens = ['rankingScreen', 'updateHistoryScreen', 'nameInputScreen'];
+        dynamicScreens.forEach(screenId => {
+            const screen = document.getElementById(screenId);
+            if (screen && screen.parentNode === document.body) {
+                screen.remove();
+                console.log(`✅ 動的画面削除: ${screenId}`);
+            }
+        });
+        
+        // 4. タイトル画面を確実に表示
         const startScreen = document.getElementById('startScreen');
         if (startScreen) {
             startScreen.style.cssText = `
@@ -2115,27 +2165,69 @@ function showTitle() {
                 display: block !important;
                 visibility: visible !important;
                 opacity: 1 !important;
+                z-index: 1 !important;
             `;
             startScreen.classList.remove('hidden');
             console.log('✅ タイトル画面表示');
         }
         
-        // タイトル関連要素を表示
+        // 5. タイトル関連要素を確実に表示
         const titleButtons = document.getElementById('titleButtons');
         if (titleButtons) {
-            titleButtons.style.display = 'flex';
-            titleButtons.style.visibility = 'visible';
+            titleButtons.style.cssText = `
+                position: absolute !important;
+                top: 50% !important;
+                right: 15px !important;
+                transform: translateY(-50%) !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 10px !important;
+                z-index: 25 !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            `;
             console.log('✅ タイトルボタン表示');
         }
         
         const startMessage = document.getElementById('startMessage');
         if (startMessage) {
-            startMessage.style.display = 'block';
-            startMessage.style.visibility = 'visible';
+            startMessage.style.cssText = `
+                position: absolute !important;
+                bottom: 3vh !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                z-index: 10 !important;
+                font-size: 2vw !important;
+                text-align: center !important;
+                color: white !important;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.8) !important;
+                font-weight: bold !important;
+                background: rgba(76, 175, 80, 0.8) !important;
+                padding: 8px 20px !important;
+                border-radius: 25px !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            `;
             console.log('✅ スタートメッセージ表示');
         }
         
-        // BGM再生
+        // 6. ロゴとタイトル画像の表示確認
+        const logo = document.querySelector('img[alt="ロゴ"]');
+        if (logo) {
+            logo.style.display = 'block';
+            logo.style.visibility = 'visible';
+            console.log('✅ ロゴ表示');
+        }
+        
+        const titleImage = document.getElementById('titleImage');
+        if (titleImage) {
+            titleImage.style.display = 'block';
+            titleImage.style.visibility = 'visible';
+            console.log('✅ タイトル画像表示');
+        }
+        
+        // 7. BGM再生
         if (window.soundManager && window.soundManager.playBGM) {
             try {
                 window.soundManager.playBGM('title');
@@ -2143,14 +2235,12 @@ function showTitle() {
             } catch (error) {
                 console.log('⚠️ タイトルBGM再生エラー:', error);
             }
-        } else {
-            console.log('⚠️ BGM再生をスキップ');
         }
         
-        // 基本イベント設定（シンプル版）
+        // 8. 基本イベント設定
         setupBasicEvents();
         
-        console.log('🎉 タイトル画面表示完了（シンプル版）');
+        console.log('🎉 タイトル画面表示完了（修正版）');
         
     } catch (error) {
         console.error('❌ showTitle処理エラー:', error);
