@@ -1953,24 +1953,10 @@ function hideUpdateHistory() {
     }
 }
 
-function showSplashScreen() {
-    console.log('💫 スプラッシュ画面表示開始');
+function showSplash() {
+    console.log('💫 スプラッシュ画面表示開始（シンプル版）');
     
     try {
-        // SimpleUIManagerが利用可能な場合は使用
-        if (simpleUIManager && typeof simpleUIManager.switchToState === 'function') {
-            try {
-                simpleUIManager.switchToState('SPLASH');
-                console.log('✅ SimpleUIManagerでSPLASH状態に遷移');
-                return; // 成功したら終了
-            } catch (error) {
-                console.error('❌ SimpleUIManager使用エラー:', error);
-                // フォールバックに続行
-            }
-        }
-        
-        // フォールバック: 直接DOM操作
-        console.log('🔄 フォールバック処理実行');
         const splashScreen = document.getElementById('splashScreen');
         const startScreen = document.getElementById('startScreen');
         
@@ -2004,27 +1990,7 @@ function showSplashScreen() {
                 splashScreen.style.display = 'none';
                 
                 // タイトル画面を表示
-                if (startScreen) {
-                    startScreen.style.cssText = `
-                        position: relative !important;
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        overflow: hidden !important;
-                        display: block !important;
-                        visibility: visible !important;
-                        opacity: 1 !important;
-                    `;
-                    startScreen.classList.remove('hidden');
-                    console.log('✅ タイトル画面表示');
-                }
-                
-                // startApp実行
-                try {
-                    startApp();
-                    console.log('✅ startApp実行完了');
-                } catch (error) {
-                    console.error('❌ startApp実行エラー:', error);
-                }
+                showTitle();
             };
             
             // タッチイベント設定（モバイル対応）
@@ -2034,7 +2000,7 @@ function showSplashScreen() {
                 splashScreen.onclick(event);
             };
             
-            console.log('✅ スプラッシュ画面表示完了（フォールバック）');
+            console.log('✅ スプラッシュ画面表示完了（シンプル版）');
         } else {
             console.error('❌ splashScreen要素が見つかりません');
         }
@@ -2046,38 +2012,11 @@ function showSplashScreen() {
             console.log('✅ タイトル画面非表示');
         }
         
-        console.log('🎉 スプラッシュ画面表示完了');
-        
     } catch (error) {
-        console.error('❌ showSplashScreen処理エラー:', error);
-        console.error('🔍 エラー詳細:', error.stack);
-        
-        // 最終フォールバック
-        try {
-            const splashScreen = document.getElementById('splashScreen');
-            if (splashScreen) {
-                splashScreen.style.display = 'flex';
-                splashScreen.onclick = function() {
-                    splashScreen.style.display = 'none';
-                    const startScreen = document.getElementById('startScreen');
-                    if (startScreen) {
-                        startScreen.style.display = 'block';
-                        startScreen.classList.remove('hidden');
-                    }
-                    try {
-                        startApp();
-                    } catch (startAppError) {
-                        console.error('❌ 最終フォールバックstartAppエラー:', startAppError);
-                    }
-                };
-                console.log('🚨 最終フォールバック実行完了');
-            }
-        } catch (emergencyError) {
-            console.error('❌ 最終フォールバックも失敗:', emergencyError);
-        }
+        console.error('❌ showSplash処理エラー:', error);
     }
 }
-
+	
 function startApp() {
     console.log('🚀 アプリ初期化開始（簡素版）');
     
@@ -2295,484 +2234,6 @@ class EventManager {
 // グローバル変数
 let eventManager;
 
-
-// ========== 画面状態一元管理システム ==========
-class GameStateManager {
-    constructor() {
-        this.currentState = 'SPLASH';
-        this.elements = new Map();
-        this.states = {
-            SPLASH: {
-                splashScreen: 'show',
-                startScreen: 'hide',
-                gameCanvas: 'inactive',
-                leftArea: 'hide',
-                rightArea: 'hide',
-                ui: 'hide',
-                titleButtons: 'hide',
-                startMessage: 'hide',
-                pauseButton: 'hide'
-            },
-            TITLE: {
-                splashScreen: 'hide',
-                startScreen: 'show',
-                gameCanvas: 'inactive',
-                leftArea: 'hide',
-                rightArea: 'hide',
-                ui: 'hide',
-                titleButtons: 'show',
-                startMessage: 'show',
-                pauseButton: 'hide'
-            },
-            GAME: {
-                splashScreen: 'hide',
-                startScreen: 'hide',
-                gameCanvas: 'active',
-                leftArea: 'show',
-                rightArea: 'show',
-                ui: 'show',
-                titleButtons: 'hide',
-                startMessage: 'hide',
-                pauseButton: 'show'
-            },
-            PAUSE: {
-                splashScreen: 'hide',
-                startScreen: 'hide',
-                gameCanvas: 'paused',
-                leftArea: 'disabled',
-                rightArea: 'disabled',
-                ui: 'show',
-                titleButtons: 'hide',
-                startMessage: 'hide',
-                pauseButton: 'show'
-            },
-            RANKING: {
-                splashScreen: 'hide',
-                startScreen: 'hide',
-                gameCanvas: 'inactive',
-                leftArea: 'hide',
-                rightArea: 'hide',
-                ui: 'hide',
-                titleButtons: 'hide',
-                startMessage: 'hide',
-                pauseButton: 'hide'
-            },
-            HISTORY: {
-                splashScreen: 'hide',
-                startScreen: 'hide',
-                gameCanvas: 'inactive',
-                leftArea: 'hide',
-                rightArea: 'hide',
-                ui: 'hide',
-                titleButtons: 'hide',
-                startMessage: 'hide',
-                pauseButton: 'hide'
-            },
-            NAMEINPUT: {
-                splashScreen: 'hide',
-                startScreen: 'hide',
-                gameCanvas: 'inactive',
-                leftArea: 'hide',
-                rightArea: 'hide',
-                ui: 'hide',
-                titleButtons: 'hide',
-                startMessage: 'hide',
-                pauseButton: 'hide'
-            }
-        };
-        
-        this.initializeElements();
-    }
-    
-initializeElements() {
-    const elementIds = [
-        'splashScreen', 'startScreen', 'gameCanvas', 'leftArea', 'rightArea',
-        'ui', 'titleButtons', 'startMessage', 'pauseButton'
-    ];
-    
-    console.log('📝 GameStateManager要素初期化開始');
-    
-    elementIds.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            this.elements.set(id, element);
-            console.log(`✅ 要素登録成功: ${id}`);
-            
-            // タッチエリア要素の特別な初期化処理
-            if (id === 'leftArea' || id === 'rightArea') {
-                // 既存のクラスを一時的に無効化して確実な制御を可能にする
-                element.setAttribute('data-original-classes', element.className);
-                element.className = '';
-                console.log(`🎮 ${id} クラスリセット完了`);
-            }
-        } else {
-            console.warn(`⚠️ 要素が見つかりません: ${id}`);
-        }
-    });
-    
-    console.log('✅ GameStateManager要素初期化完了');
-}
-    
-// 状態切り替え（シンプル版）
-switchToState(newState) {
-    console.log(`🔄 SimpleUIManager状態遷移: ${this.currentState} → ${newState}`);
-    
-    // タッチエリアがまだ作成されていない場合は作成
-    if (!this.touchAreasCreated) {
-        this.createTouchAreas();
-    }
-    
-    const leftArea = document.getElementById('leftArea');
-    const rightArea = document.getElementById('rightArea');
-    const startScreen = document.getElementById('startScreen');
-    const splashScreen = document.getElementById('splashScreen');
-    const pauseScreen = document.getElementById('pauseScreen');
-    const ui = document.getElementById('ui');
-    const pauseButton = document.getElementById('pauseButton');
-    
-    // 全要素を一度非表示
-    if (leftArea) leftArea.style.display = 'none';
-    if (rightArea) rightArea.style.display = 'none';
-    if (startScreen) startScreen.style.display = 'none';
-    if (splashScreen) splashScreen.style.display = 'none';
-    if (pauseScreen) pauseScreen.style.display = 'none';
-    if (ui) ui.style.display = 'none';
-    if (pauseButton) pauseButton.style.display = 'none';
-    
-    // 状態別表示制御
-    switch(newState) {
-        case 'SPLASH':
-            if (splashScreen) {
-                splashScreen.style.display = 'flex';
-                splashScreen.style.zIndex = '1000000'; // タッチエリアより前面に
-            }
-            // SPLASH状態ではタッチエリアは非表示のまま
-            break;
-            
-        case 'TITLE':
-            if (startScreen) startScreen.style.display = 'block';
-            // TITLE状態でもタッチエリアは非表示のまま
-            break;
-            
-        case 'GAME':
-            if (leftArea) leftArea.style.display = 'block';
-            if (rightArea) rightArea.style.display = 'block';
-            if (ui) ui.style.display = 'block';
-            if (pauseButton) pauseButton.style.display = 'block';
-            break;
-            
-        case 'PAUSE':
-            if (leftArea) leftArea.style.display = 'block';
-            if (rightArea) rightArea.style.display = 'block';
-            if (ui) ui.style.display = 'block';
-            if (pauseButton) pauseButton.style.display = 'block';
-            if (pauseScreen) pauseScreen.style.display = 'flex';
-            break;
-            
-        case 'RANKING':
-        case 'HISTORY':
-        case 'NAMEINPUT':
-            // これらの状態では動的に作成された画面が表示される
-            break;
-    }
-    
-    this.currentState = newState;
-    console.log(`✅ SimpleUIManager状態遷移完了: ${newState}`);
-}
-    
-applyElementAction(element, elementId, action) {
-    console.log(`🎛️ 要素制御: ${elementId} → ${action}`);
-    
-    switch(action) {
-        case 'show':
-            if (elementId === 'leftArea' || elementId === 'rightArea') {
-                console.log(`🔥 ${elementId} 徹底的表示処理開始`);
-                
-                // 1. 要素の存在確認
-                if (!element) {
-                    console.error(`❌ ${elementId} 要素が存在しません`);
-                    return;
-                }
-                
-                // 2. 既存の全ての設定をクリア
-                element.removeAttribute('class');
-                element.style.cssText = '';
-                
-                // 3. 確実な高さ設定と基本スタイル
-                element.style.position = 'fixed';
-                element.style.top = '0px';
-                element.style.width = elementId === 'leftArea' ? '67%' : '33%';
-                element.style.height = '100vh'; // 明示的な高さ設定
-                element.style.zIndex = '2147483647';
-                element.style.display = 'flex';
-                element.style.alignItems = 'center';
-                element.style.justifyContent = 'center';
-                element.style.visibility = 'visible';
-                element.style.opacity = '1';
-                element.style.pointerEvents = 'auto';
-                
-                // 4. 位置とスタイルの設定
-                if (elementId === 'leftArea') {
-                    element.style.left = '0px';
-                    element.style.background = 'rgba(255, 0, 0, 0.6)'; // 赤色で確認しやすく
-                    element.style.borderRight = '3px solid #ffffff';
-                    
-                    // leftArea専用の内部構造を再構築
-                    element.innerHTML = `
-                        <div style="position: absolute; left: 0; top: 0; width: 32.84%; height: 100%; background: rgba(255, 255, 255, 0.15); pointer-events: none; z-index: 1;"></div>
-                        <div style="position: absolute; left: 32.84%; top: 0; width: 67.16%; height: 100%; background: rgba(255, 100, 100, 0.15); pointer-events: none; z-index: 1;"></div>
-                        <div style="position: absolute; left: 32.84%; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.6); transform: translateX(-50%); pointer-events: none; z-index: 3;"></div>
-                        <div style="position: absolute; left: 16.42%; top: 40%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 3.5vw; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: none; z-index: 4;">Left</div>
-                        <div style="position: absolute; left: 66%; top: 40%; transform: translateX(-50%); color: rgba(255,100,100,0.8); font-size: 3.5vw; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: none; z-index: 4;">Right</div>
-                        <div style="position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.6); font-size: 2.5vw; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: none; z-index: 4;">📱 下スワイプで降下</div>
-                    `;
-                } else if (elementId === 'rightArea') {
-                    element.style.right = '0px';
-                    element.style.background = 'rgba(0, 255, 0, 0.6)'; // 緑色で確認しやすく
-                    element.style.color = '#ffffff';
-                    element.style.fontSize = '4vw';
-                    element.style.fontWeight = 'bold';
-                    element.style.textShadow = '1px 1px 2px rgba(255,20,147,0.8)';
-                    element.textContent = '⭐ ジャンプ';
-                }
-                
-                console.log(`✅ ${elementId} 基本スタイル適用完了`);
-                
-                // 5. 確実性確認
-                setTimeout(() => {
-                    const computedStyle = window.getComputedStyle(element);
-                    const rect = element.getBoundingClientRect();
-                    
-                    console.log(`🔍 ${elementId} 最終確認:`);
-                    console.log(`  計算済み高さ: ${computedStyle.height}`);
-                    console.log(`  実際のサイズ: ${rect.width}x${rect.height}`);
-                    
-                    if (rect.width === 0 || rect.height === 0) {
-                        console.error(`❌ ${elementId} まだサイズが0です！緊急修正実行`);
-                        
-                        // 緊急修正
-                        element.style.setProperty('height', '100vh', 'important');
-                        element.style.setProperty('min-height', '100vh', 'important');
-                        element.style.setProperty('position', 'fixed', 'important');
-                        element.style.setProperty('top', '0', 'important');
-                        element.style.setProperty('display', 'flex', 'important');
-                        
-                        if (elementId === 'leftArea') {
-                            element.style.setProperty('left', '0', 'important');
-                            element.style.setProperty('width', '67%', 'important');
-                        } else {
-                            element.style.setProperty('right', '0', 'important');
-                            element.style.setProperty('width', '33%', 'important');
-                        }
-                        
-                        console.log(`🚨 ${elementId} 緊急修正完了`);
-                    } else {
-                        console.log(`✅ ${elementId} 正常にサイズが設定されています`);
-                    }
-                }, 100);
-                
-            } else if (elementId === 'pauseButton') {
-                console.log(`🔥 pauseButton 徹底的表示処理開始`);
-                
-                if (!element) {
-                    console.error(`❌ pauseButton 要素が存在しません`);
-                    return;
-                }
-                
-                // pauseButtonの強制表示
-                element.style.cssText = '';
-                element.style.position = 'fixed';
-                element.style.top = '20px';
-                element.style.right = '20px';
-                element.style.width = '60px';
-                element.style.height = '40px';
-                element.style.background = 'rgba(255, 0, 0, 0.8)';
-                element.style.color = '#ffffff';
-                element.style.border = 'none';
-                element.style.borderRadius = '8px';
-                element.style.fontSize = '18px';
-                element.style.fontWeight = 'bold';
-                element.style.cursor = 'pointer';
-                element.style.zIndex = '2147483647';
-                element.style.display = 'block';
-                element.style.visibility = 'visible';
-                element.style.opacity = '1';
-                element.style.pointerEvents = 'auto';
-                element.textContent = '⏸️';
-                
-                console.log(`✅ pauseButton 基本スタイル適用完了`);
-                
-            } else {
-                element.style.cssText = this.getShowStyle(elementId);
-            }
-            
-            element.classList.remove('hidden');
-            console.log(`👁️ ${elementId} 表示完了`);
-            break;
-            
-        case 'hide':
-            element.style.cssText = 'display: none !important; visibility: hidden !important;';
-            element.classList.add('hidden');
-            console.log(`👻 ${elementId} 非表示完了`);
-            break;
-            
-        case 'disabled':
-            element.style.pointerEvents = 'none';
-            element.style.opacity = '0.5';
-            console.log(`🚫 ${elementId} 無効化完了`);
-            break;
-            
-        case 'active':
-            console.log(`🎮 ${elementId} アクティブ状態`);
-            break;
-            
-        case 'inactive':
-            console.log(`⏸️ ${elementId} 非アクティブ状態`);
-            break;
-            
-        case 'paused':
-            console.log(`⏯️ ${elementId} 一時停止状態`);
-            break;
-    }
-}
-
-    
-getShowStyle(elementId) {
-    const styles = {
-        leftArea: `
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            width: 67% !important;
-            background: rgba(255,182,193,0.4) !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.4) !important;
-            z-index: 2147483647 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-            color: white !important;
-            font-size: 4vw !important;
-            text-shadow: 1px 1px 2px rgba(255,20,147,0.8) !important;
-            font-weight: bold !important;
-            transition: none !important;
-            transform: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            overflow: visible !important;
-            clip: auto !important;
-            clip-path: none !important;
-        `,
-        rightArea: `
-            position: fixed !important;
-            right: 0 !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            width: 33% !important;
-            background: rgba(255,182,193,0.4) !important;
-            z-index: 2147483647 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-            color: white !important;
-            font-size: 4vw !important;
-            text-shadow: 1px 1px 2px rgba(255,20,147,0.8) !important;
-            font-weight: bold !important;
-            transition: none !important;
-            transform: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            overflow: visible !important;
-            clip: auto !important;
-            clip-path: none !important;
-        `,
-        ui: 'display: block !important; visibility: visible !important;',
-        titleButtons: 'display: flex !important; visibility: visible !important;',
-        startMessage: 'display: block !important; visibility: visible !important;',
-        pauseButton: `
-            position: fixed !important;
-            top: 15px !important;
-            right: 15px !important;
-            background: rgba(0, 0, 0, 0.8) !important;
-            color: white !important;
-            border: none !important;
-            padding: 10px !important;
-            font-size: 20px !important;
-            border-radius: 8px !important;
-            cursor: pointer !important;
-            z-index: 2147483647 !important;
-            font-weight: bold !important;
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            width: auto !important;
-            height: auto !important;
-            transform: none !important;
-            margin: 0 !important;
-            box-shadow: none !important;
-            clip: auto !important;
-            clip-path: none !important;
-            pointer-events: auto !important;
-        `,
-        splashScreen: `
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            background: #000000 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-            align-items: center !important;
-            z-index: 1000 !important;
-            cursor: pointer !important;
-            padding: 5vh 5vw !important;
-            box-sizing: border-box !important;
-            visibility: visible !important;
-        `,
-        startScreen: `
-            position: relative !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            overflow: hidden !important;
-            display: block !important;
-            visibility: visible !important;
-        `
-    };
-    
-    return styles[elementId] || 'display: block !important; visibility: visible !important;';
-}
-    
-    getCurrentState() {
-        return this.currentState;
-    }
-    
-    // 要素の再初期化（動的に作成された要素用）
-    reinitializeElement(elementId) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            this.elements.set(elementId, element);
-            console.log(`🔄 要素再登録: ${elementId}`);
-            return true;
-        }
-        console.warn(`⚠️ 要素再登録失敗: ${elementId}`);
-        return false;
-    }
-}
-
-// グローバル変数
-let gameStateManager;
 
 function handleTitleScreenClick(event) {
     console.log('🎮 タイトル画面タップ検出:', event.target.id); // デバッグ用にクリックされた要素のIDを表示
@@ -5212,39 +4673,20 @@ function resetGame() {
             }
         }
         
-function initialize() {
-    console.log('🎮 ゲーム初期化開始...');
+function simpleInitialize() {
+    console.log('🎮 シンプル初期化開始...');
 
-    // SimpleUIManagerの安全な初期化
     try {
-        // クラスの存在確認
-        if (typeof SimpleUIManager === 'function') {
-            simpleUIManager = new SimpleUIManager();
-            console.log('✅ SimpleUIManager初期化成功');
+        // SoundManager初期化（既存システム活用）
+        if (typeof SoundManager !== 'undefined') {
+            window.soundManager = new SoundManager();
+            console.log('✅ SoundManager初期化成功');
         } else {
-            console.error('❌ SimpleUIManagerクラスが見つかりません');
-            simpleUIManager = null;
+            console.log('⚠️ SoundManager未定義');
+            window.soundManager = null;
         }
-    } catch (error) {
-        console.error('❌ SimpleUIManager初期化失敗:', error);
-        simpleUIManager = null;
-    }
 
-    // GameStateManagerも保持
-    try {
-        if (typeof GameStateManager === 'function') {
-            gameStateManager = new GameStateManager();
-            console.log('✅ GameStateManager初期化成功');
-        } else {
-            gameStateManager = null;
-        }
-    } catch (error) {
-        console.error('❌ GameStateManager初期化失敗:', error);
-        gameStateManager = null;
-    }
-    
-    try {
-        // タイトル画像をランダムに選択（全35枚）
+        // タイトル画像をランダムに選択（既存機能保持）
         const titleImages = [
             'https://img.fpack.jp/shop/nyanpon/images/173986677576251900.jpg',
             'https://pbs.twimg.com/media/GjvkMpDbgAApxmV?format=jpg&name=large',
@@ -5306,12 +4748,13 @@ function initialize() {
             console.error('❌ タイトル画像要素が見つかりません');
         }
         
-        // ゲーム基本システム初期化
+        // ゲーム基本システム初期化（既存機能保持）
         initTerrain();
         resizeCanvas();
         requestAnimationFrame(gameLoop);
         
-        console.log('🐣 ぴよ氏の冒険 - 初期化完了！');
+        console.log('🐣 シンプル初期化完了！');
+        
     } catch (error) {
         console.error('❌ 初期化エラー:', error);
         console.error('🔍 エラー詳細:', error.stack);
@@ -5319,10 +4762,10 @@ function initialize() {
 
     // スプラッシュ画面表示
     setTimeout(() => {
-        showSplashScreen();
+        showSplash();
     }, 200);
 }
-
+	
 function checkOrientation() {
     if (window.orientation !== undefined) {
         if (window.orientation === 0 || window.orientation === 180) {
@@ -5375,28 +4818,21 @@ function checkOrientation() {
             console.log('🎮 Canvas要素:', canvasCheck ? '存在する' : '存在しない');
             console.log('🖼️ タイトル画像要素:', titleImageCheck ? '存在する' : '存在しない');
             
-            setTimeout(function() {
-                try {
-                    console.log('⚡ 初期化関数を呼び出します...');
-                    
-                    // 起動時更新チェックを実行
-                    // checkForUpdatesOnStartup();
-                    
-                    // ゲーム初期化
-                    initialize();
-                    checkOrientation();
-                    
-                    // インテリジェント更新チェック開始
-                    // startSmartUpdateCheck();
-                    
-                    window.addEventListener('orientationchange', function() {
-                        setTimeout(() => {
-                            checkOrientation();
-                            resizeCanvas();
-                        }, 100);
-                    });
-                    
-                    setTimeout(function() {
+	　　setTimeout(function() {
+	　　    try {
+	　　        console.log('⚡ 初期化関数を呼び出します...');
+        
+	　　        // 起動時更新チェックを実行
+	　　        // checkForUpdatesOnStartup();
+        
+	　　        // ゲーム初期化
+	　　        simpleInitialize();
+	　　        checkOrientation();
+        
+	　　        // インテリジェント更新チェック開始
+	　　        // startSmartUpdateCheck();
+        
+	　　        window.addEventListener('orientationchange', function() {
                         window.scrollTo(0, 1);
                     }, 100);
                     
