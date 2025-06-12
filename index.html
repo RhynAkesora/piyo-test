@@ -2093,6 +2093,141 @@ function startApp() {
     }
 }
 
+function showTitle() {
+    console.log('🏠 タイトル画面表示開始（シンプル版）');
+    
+    try {
+        // スプラッシュ画面を非表示
+        const splashScreen = document.getElementById('splashScreen');
+        if (splashScreen) {
+            splashScreen.style.display = 'none';
+            console.log('✅ スプラッシュ画面非表示');
+        }
+        
+        // タイトル画面を表示
+        const startScreen = document.getElementById('startScreen');
+        if (startScreen) {
+            startScreen.style.cssText = `
+                position: relative !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                overflow: hidden !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            `;
+            startScreen.classList.remove('hidden');
+            console.log('✅ タイトル画面表示');
+        }
+        
+        // タイトル関連要素を表示
+        const titleButtons = document.getElementById('titleButtons');
+        if (titleButtons) {
+            titleButtons.style.display = 'flex';
+            titleButtons.style.visibility = 'visible';
+            console.log('✅ タイトルボタン表示');
+        }
+        
+        const startMessage = document.getElementById('startMessage');
+        if (startMessage) {
+            startMessage.style.display = 'block';
+            startMessage.style.visibility = 'visible';
+            console.log('✅ スタートメッセージ表示');
+        }
+        
+        // BGM再生
+        if (window.soundManager && window.soundManager.playBGM) {
+            try {
+                window.soundManager.playBGM('title');
+                console.log('🎵 タイトルBGM再生開始');
+            } catch (error) {
+                console.log('⚠️ タイトルBGM再生エラー:', error);
+            }
+        } else {
+            console.log('⚠️ BGM再生をスキップ');
+        }
+        
+        // 基本イベント設定（シンプル版）
+        setupBasicEvents();
+        
+        console.log('🎉 タイトル画面表示完了（シンプル版）');
+        
+    } catch (error) {
+        console.error('❌ showTitle処理エラー:', error);
+        console.error('🔍 エラー詳細:', error.stack);
+    }
+}
+
+	function setupBasicEvents() {
+    console.log('🎮 基本イベント設定開始（シンプル版）');
+    
+    try {
+        // ポーズボタンイベント
+        const pauseButton = document.getElementById('pauseButton');
+        if (pauseButton) {
+            pauseButton.onclick = function() {
+                console.log('✅ ポーズボタンクリック');
+                pauseGame();
+            };
+            console.log('✅ ポーズボタンイベント設定');
+        }
+
+        // 更新履歴ボタンイベント
+        const updateHistoryButton = document.getElementById('updateHistoryButton');
+        if (updateHistoryButton) {
+            updateHistoryButton.onclick = function(e) {
+                e.stopPropagation();
+                console.log('✅ 更新履歴ボタンクリック');
+                showUpdateHistory();
+            };
+            console.log('✅ 更新履歴ボタンイベント設定');
+        }
+
+        // ランキングボタンイベント
+        const rankingButton = document.getElementById('rankingButton');
+        if (rankingButton) {
+            rankingButton.onclick = function(e) {
+                e.stopPropagation();
+                console.log('✅ ランキングボタンクリック');
+                showRanking();
+            };
+            console.log('✅ ランキングボタンイベント設定');
+        }
+
+        // タイトル画面のゲーム開始（ボタン以外の場所）
+        const startScreen = document.getElementById('startScreen');
+        if (startScreen) {
+            startScreen.onclick = function(event) {
+                // ボタン以外の場所をクリックした場合のみゲーム開始
+                if (!event.target.classList.contains('game-button') && 
+                    event.target.id !== 'updateHistoryButton' && 
+                    event.target.id !== 'rankingButton') {
+                    console.log('✅ タイトル画面クリック - ゲーム開始');
+                    startGame();
+                }
+            };
+            console.log('✅ タイトル画面イベント設定');
+        }
+
+        // ポーズ画面のクリック（再開用）
+        const pauseScreen = document.getElementById('pauseScreen');
+        if (pauseScreen) {
+            pauseScreen.onclick = function(e) {
+                if (e.target === pauseScreen) {
+                    console.log('✅ ポーズ画面クリック - 再開');
+                    pauseGame();
+                }
+            };
+            console.log('✅ ポーズ画面イベント設定');
+        }
+        
+        console.log('🎉 基本イベント設定完了（シンプル版）');
+        
+    } catch (error) {
+        console.error('❌ setupBasicEvents処理エラー:', error);
+    }
+}
+	
 	// ========== イベント管理システム ==========
 class EventManager {
     constructor() {
