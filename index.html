@@ -2094,67 +2094,87 @@ function startApp() {
 }
 
 function showTitle() {
-    console.log('🏠 タイトル画面表示開始（修正版）');
+    console.log('🏠 タイトル画面表示開始（完全修正版）');
     
     try {
-        // 1. 全ての画面要素を確実に非表示
-        const splashScreen = document.getElementById('splashScreen');
+        // 🔥 STEP1: ゲーム中UI要素を強制非表示
+        const uiElement = document.getElementById('ui');
+        if (uiElement) {
+            uiElement.style.cssText = `
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                z-index: -1 !important;
+                position: absolute !important;
+                left: -9999px !important;
+                top: -9999px !important;
+            `;
+            console.log('🔥 ゲームUI強制非表示完了');
+        } else {
+            console.log('⚠️ UI要素が見つかりません');
+        }
+
+        // 🔥 STEP2: ポーズボタンを強制非表示
+        const pauseButtonElement = document.getElementById('pauseButton');
+        if (pauseButtonElement) {
+            pauseButtonElement.style.cssText = `
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                z-index: -1 !important;
+                position: absolute !important;
+                left: -9999px !important;
+                top: -9999px !important;
+            `;
+            console.log('🔥 ポーズボタン強制非表示完了');
+        } else {
+            console.log('⚠️ ポーズボタンが見つかりません');
+        }
+
+        // 🔥 STEP3: 既存タッチエリアを完全削除
+        const touchAreaIds = ['leftArea', 'rightArea', 'jumpArea'];
+        touchAreaIds.forEach(areaId => {
+            const existingArea = document.getElementById(areaId);
+            if (existingArea) {
+                existingArea.remove();
+                console.log(`🗑️ ${areaId}削除完了`);
+            }
+        });
+
+        // 🔥 STEP4: その他のゲーム画面要素を非表示
         const pauseScreen = document.getElementById('pauseScreen');
-        const ui = document.getElementById('ui');
-        const pauseButton = document.getElementById('pauseButton');
-        
-        if (splashScreen) {
-            splashScreen.style.display = 'none';
-            console.log('✅ スプラッシュ画面非表示');
-        }
-        
         if (pauseScreen) {
-            pauseScreen.style.display = 'none';
+            pauseScreen.style.cssText = `
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            `;
             pauseScreen.classList.add('hidden');
-            console.log('✅ ポーズ画面非表示');
+            console.log('🔥 ポーズ画面非表示完了');
         }
-        
-        if (ui) {
-            ui.style.display = 'none';
-            console.log('✅ ゲームUI非表示');
+
+        // 🔥 STEP5: スプラッシュ画面を確実に非表示
+        const splashScreen = document.getElementById('splashScreen');
+        if (splashScreen) {
+            splashScreen.style.cssText = `
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            `;
+            console.log('🔥 スプラッシュ画面非表示完了');
         }
-        
-        if (pauseButton) {
-            pauseButton.style.display = 'none';
-            console.log('✅ ポーズボタン非表示');
-        }
-        
-        // 2. 既存のタッチエリアを完全削除
-        const existingLeftArea = document.getElementById('leftArea');
-        const existingRightArea = document.getElementById('rightArea');
-        const existingJumpArea = document.getElementById('jumpArea');
-        
-        if (existingLeftArea) {
-            existingLeftArea.remove();
-            console.log('✅ 既存leftArea削除');
-        }
-        
-        if (existingRightArea) {
-            existingRightArea.remove();
-            console.log('✅ 既存rightArea削除');
-        }
-        
-        if (existingJumpArea) {
-            existingJumpArea.remove();
-            console.log('✅ 既存jumpArea削除');
-        }
-        
-        // 3. 動的に作成された画面を削除
+
+        // 🔥 STEP6: 動的作成画面を全て削除
         const dynamicScreens = ['rankingScreen', 'updateHistoryScreen', 'nameInputScreen'];
         dynamicScreens.forEach(screenId => {
             const screen = document.getElementById(screenId);
             if (screen && screen.parentNode === document.body) {
                 screen.remove();
-                console.log(`✅ 動的画面削除: ${screenId}`);
+                console.log(`🗑️ 動的画面削除: ${screenId}`);
             }
         });
-        
-        // 4. タイトル画面を確実に表示
+
+        // 🔥 STEP7: タイトル画面を確実表示
         const startScreen = document.getElementById('startScreen');
         if (startScreen) {
             startScreen.style.cssText = `
@@ -2166,12 +2186,13 @@ function showTitle() {
                 visibility: visible !important;
                 opacity: 1 !important;
                 z-index: 1 !important;
+                background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 40%, #FFB6C1 70%, #FFC0CB 100%) !important;
             `;
             startScreen.classList.remove('hidden');
-            console.log('✅ タイトル画面表示');
+            console.log('🔥 タイトル画面表示完了');
         }
-        
-        // 5. タイトル関連要素を確実に表示
+
+        // 🔥 STEP8: タイトル要素を確実表示
         const titleButtons = document.getElementById('titleButtons');
         if (titleButtons) {
             titleButtons.style.cssText = `
@@ -2186,9 +2207,9 @@ function showTitle() {
                 visibility: visible !important;
                 opacity: 1 !important;
             `;
-            console.log('✅ タイトルボタン表示');
+            console.log('🔥 タイトルボタン表示完了');
         }
-        
+
         const startMessage = document.getElementById('startMessage');
         if (startMessage) {
             startMessage.style.cssText = `
@@ -2209,25 +2230,42 @@ function showTitle() {
                 visibility: visible !important;
                 opacity: 1 !important;
             `;
-            console.log('✅ スタートメッセージ表示');
+            console.log('🔥 スタートメッセージ表示完了');
         }
-        
-        // 6. ロゴとタイトル画像の表示確認
-        const logo = document.querySelector('img[alt="ロゴ"]');
-        if (logo) {
-            logo.style.display = 'block';
-            logo.style.visibility = 'visible';
-            console.log('✅ ロゴ表示');
-        }
-        
+
+        // 🔥 STEP9: ロゴとタイトル画像表示確認
+        const logoElements = document.querySelectorAll('img[alt="ロゴ"]');
+        logoElements.forEach(logo => {
+            logo.style.cssText = `
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 10 !important;
+            `;
+        });
+
         const titleImage = document.getElementById('titleImage');
         if (titleImage) {
-            titleImage.style.display = 'block';
-            titleImage.style.visibility = 'visible';
-            console.log('✅ タイトル画像表示');
+            titleImage.style.cssText = `
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 1 !important;
+            `;
+            console.log('🔥 タイトル画像表示完了');
         }
-        
-        // 7. BGM再生
+
+        // 🔥 STEP10: Canvas z-indexをリセット
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) {
+            canvas.style.zIndex = '1';
+            console.log('🔥 Canvas z-index リセット完了');
+        }
+
+        // 🔥 STEP11: 基本イベント再設定
+        setupBasicEventsFixed();
+
+        // 🔥 STEP12: タイトルBGM再生
         if (window.soundManager && window.soundManager.playBGM) {
             try {
                 window.soundManager.playBGM('title');
@@ -2236,28 +2274,41 @@ function showTitle() {
                 console.log('⚠️ タイトルBGM再生エラー:', error);
             }
         }
-        
-        // 8. 基本イベント設定
-        setupBasicEvents();
-        
-        console.log('🎉 タイトル画面表示完了（修正版）');
-        
+
+        console.log('🎉 タイトル画面表示完了（完全修正版）');
+
     } catch (error) {
         console.error('❌ showTitle処理エラー:', error);
         console.error('🔍 エラー詳細:', error.stack);
     }
 }
 
-	function setupBasicEvents() {
-    console.log('🎮 基本イベント設定開始（シンプル版）');
+function setupBasicEventsFixed() {
+    console.log('🎮 基本イベント設定開始（修正版）');
     
     try {
-        // ポーズボタンイベント
+        // 既存イベントを全てクリア
+        const elementsToClean = ['pauseButton', 'updateHistoryButton', 'rankingButton', 'startScreen', 'pauseScreen'];
+        elementsToClean.forEach(elementId => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.onclick = null;
+                element.onmousedown = null;
+                element.ontouchstart = null;
+                element.ontouchend = null;
+            }
+        });
+
+        // ポーズボタンイベント（ゲーム中のみ有効）
         const pauseButton = document.getElementById('pauseButton');
         if (pauseButton) {
-            pauseButton.onclick = function() {
-                console.log('✅ ポーズボタンクリック');
-                pauseGame();
+            pauseButton.onclick = function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (gameState.gameStarted) {
+                    console.log('✅ ポーズボタンクリック');
+                    pauseGame();
+                }
             };
             console.log('✅ ポーズボタンイベント設定');
         }
@@ -2265,8 +2316,9 @@ function showTitle() {
         // 更新履歴ボタンイベント
         const updateHistoryButton = document.getElementById('updateHistoryButton');
         if (updateHistoryButton) {
-            updateHistoryButton.onclick = function(e) {
-                e.stopPropagation();
+            updateHistoryButton.onclick = function(event) {
+                event.preventDefault();
+                event.stopPropagation();
                 console.log('✅ 更新履歴ボタンクリック');
                 showUpdateHistory();
             };
@@ -2276,8 +2328,9 @@ function showTitle() {
         // ランキングボタンイベント
         const rankingButton = document.getElementById('rankingButton');
         if (rankingButton) {
-            rankingButton.onclick = function(e) {
-                e.stopPropagation();
+            rankingButton.onclick = function(event) {
+                event.preventDefault();
+                event.stopPropagation();
                 console.log('✅ ランキングボタンクリック');
                 showRanking();
             };
@@ -2288,13 +2341,15 @@ function showTitle() {
         const startScreen = document.getElementById('startScreen');
         if (startScreen) {
             startScreen.onclick = function(event) {
-                // ボタン以外の場所をクリックした場合のみゲーム開始
-                if (!event.target.classList.contains('game-button') && 
-                    event.target.id !== 'updateHistoryButton' && 
-                    event.target.id !== 'rankingButton') {
-                    console.log('✅ タイトル画面クリック - ゲーム開始');
-                    startGame();
+                // ボタンがクリックされた場合は処理しない
+                if (event.target.classList.contains('game-button') || 
+                    event.target.id === 'updateHistoryButton' || 
+                    event.target.id === 'rankingButton') {
+                    return;
                 }
+                
+                console.log('✅ タイトル画面クリック - ゲーム開始');
+                startGame();
             };
             console.log('✅ タイトル画面イベント設定');
         }
@@ -2302,8 +2357,8 @@ function showTitle() {
         // ポーズ画面のクリック（再開用）
         const pauseScreen = document.getElementById('pauseScreen');
         if (pauseScreen) {
-            pauseScreen.onclick = function(e) {
-                if (e.target === pauseScreen) {
+            pauseScreen.onclick = function(event) {
+                if (event.target === pauseScreen && gameState.gameStarted) {
                     console.log('✅ ポーズ画面クリック - 再開');
                     pauseGame();
                 }
@@ -2311,10 +2366,10 @@ function showTitle() {
             console.log('✅ ポーズ画面イベント設定');
         }
         
-        console.log('🎉 基本イベント設定完了（シンプル版）');
+        console.log('🎉 基本イベント設定完了（修正版）');
         
     } catch (error) {
-        console.error('❌ setupBasicEvents処理エラー:', error);
+        console.error('❌ setupBasicEventsFixed処理エラー:', error);
     }
 }
 	
