@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>怪異街歩き「14番地」</title>
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="14番地">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>14番地</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -283,7 +289,7 @@ function dTitle(){
   X.fillText('画面右側タッチ → 前進',tx,H*0.58);X.fillText('画面左側タッチ → 引き返す',tx,H*0.67);X.fillText('14番地を超えればクリア！',tx,H*0.76);
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.26',W/2,H*0.98);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.27',W/2,H*0.98);
 }
 
 // === CLEAR ===
@@ -360,6 +366,7 @@ C.addEventListener('mouseup',()=>{bL=false;bR=false});C.addEventListener('mousel
 document.addEventListener('keydown',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=true;if(e.key==='ArrowLeft'||e.key==='a')bL=true;if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle)}else if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…')}else if(gs==='clear'){gs='title';playBgm(bgmTitle)}});
 document.addEventListener('keyup',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=false;if(e.key==='ArrowLeft'||e.key==='a')bL=false});
 loop();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
 </body>
 </html>
