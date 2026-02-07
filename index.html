@@ -42,11 +42,25 @@ const WALK_R=['walk_0','stand','walk_2','stand'];
 const WALK_L=['walk_0_L','stand_L','walk_2_L','stand_L'];
 
 // === BGM ===
-const bgmTitle=new Audio('14th Block Title.mp3');bgmTitle.loop=true;
-const bgmStage=new Audio('14th Block Stage.mp3');bgmStage.loop=true;
-const bgmGoal=new Audio('14th Block Goal.mp3');bgmGoal.loop=false;
+const bgmTitle=new Audio('14th Block Title.mp3');bgmTitle.loop=true;bgmTitle.preload='auto';
+const bgmStage=new Audio('14th Block Stage.mp3');bgmStage.loop=true;bgmStage.preload='auto';
+const bgmGoal=new Audio('14th Block Goal.mp3');bgmGoal.loop=false;bgmGoal.preload='auto';
 let curBgm=null;
-function playBgm(bgm){if(curBgm===bgm)return;if(curBgm){curBgm.pause();curBgm.currentTime=0}curBgm=bgm;if(bgm){bgm.currentTime=0;bgm.play().catch(()=>{})}}
+let audioUnlocked=false;
+function unlockAudio(){
+  if(audioUnlocked)return;
+  audioUnlocked=true;
+  // Touch all audio elements to unlock them
+  [bgmTitle,bgmStage,bgmGoal].forEach(a=>{a.load();a.volume=1;});
+  // Create and resume AudioContext to unlock Web Audio
+  try{const ac=new(window.AudioContext||window.webkitAudioContext)();ac.resume();}catch(e){}
+}
+function playBgm(bgm){
+  if(curBgm===bgm&&!curBgm.paused)return;
+  if(curBgm){curBgm.pause();curBgm.currentTime=0}
+  curBgm=bgm;
+  if(bgm){bgm.currentTime=0;const p=bgm.play();if(p)p.catch(()=>{setTimeout(()=>{bgm.play().catch(()=>{})},100)})}
+}
 function stopBgm(){if(curBgm){curBgm.pause();curBgm.currentTime=0;curBgm=null}}
 
 let gs='tap',cB=1,camX=0,pX=100,pDir=1,pMov=false,pFr=0,pAT=0,fc=0;
@@ -258,6 +272,7 @@ function dTitle(){
   X.fillText('画面右側タッチ → 前進',tx,H*0.58);X.fillText('画面左側タッチ → 引き返す',tx,H*0.67);X.fillText('14番地を超えればクリア！',tx,H*0.76);
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.2',W/2,H*0.98);
 }
 
 // === CLEAR ===
@@ -324,13 +339,13 @@ function render(){
 function loop(){update();render();requestAnimationFrame(loop)}
 
 // === INPUT ===
-function hS(e){e.preventDefault();if(gs==='tap'){gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'){gs='title';playBgm(bgmTitle);return}const rc=C.getBoundingClientRect(),ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];for(let t of ts){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
+function hS(e){e.preventDefault();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'){gs='title';playBgm(bgmTitle);return}const rc=C.getBoundingClientRect(),ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];for(let t of ts){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
 function uT(e){e.preventDefault();if(gs!=='playing')return;bL=false;bR=false;const rc=C.getBoundingClientRect();if(e.touches)for(let t of e.touches){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
 function hE(e){e.preventDefault();if(e.touches&&e.touches.length>0)uT(e);else{bL=false;bR=false}}
 C.addEventListener('touchstart',hS,{passive:false});C.addEventListener('touchmove',uT,{passive:false});C.addEventListener('touchend',hE,{passive:false});C.addEventListener('touchcancel',hE,{passive:false});
-C.addEventListener('mousedown',(e)=>{e.preventDefault();if(gs==='tap'){gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'){gs='title';playBgm(bgmTitle);return}if(e.clientX<W*0.4)bL=true;else bR=true});
+C.addEventListener('mousedown',(e)=>{e.preventDefault();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'){gs='title';playBgm(bgmTitle);return}if(e.clientX<W*0.4)bL=true;else bR=true});
 C.addEventListener('mouseup',()=>{bL=false;bR=false});C.addEventListener('mouseleave',()=>{bL=false;bR=false});
-document.addEventListener('keydown',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=true;if(e.key==='ArrowLeft'||e.key==='a')bL=true;if(gs==='tap'){gs='title';playBgm(bgmTitle)}else if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…')}else if(gs==='clear'){gs='title';playBgm(bgmTitle)}});
+document.addEventListener('keydown',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=true;if(e.key==='ArrowLeft'||e.key==='a')bL=true;if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle)}else if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…')}else if(gs==='clear'){gs='title';playBgm(bgmTitle)}});
 document.addEventListener('keyup',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=false;if(e.key==='ArrowLeft'||e.key==='a')bL=false});
 loop();
 </script>
