@@ -23,7 +23,7 @@ canvas{display:block;position:absolute;top:0;left:0}
 </style>
 </head>
 <body>
-<div id="rb"><div class="ic">📱</div><div class="mg">スマホを横に回転してください</div><div class="sb">画面ロックを解除して<br/>横画面でプレイしてください</div></div>
+<div id="rb"><div class="ic">📱</div><div class="mg">スマホを横に回転してください</div><div class="sb">画面ロックを解除して<br/>横画面でプレイしてください<br/><br/>※ホーム画面に追加でアプリ化</div></div>
 <canvas id="gc"></canvas>
 <script>
 'use strict';
@@ -289,7 +289,7 @@ function dTitle(){
   X.fillText('画面右側タッチ → 前進',tx,H*0.58);X.fillText('画面左側タッチ → 引き返す',tx,H*0.67);X.fillText('14番地を超えればクリア！',tx,H*0.76);
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.27',W/2,H*0.98);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.28',W/2,H*0.98);
 }
 
 // === CLEAR ===
