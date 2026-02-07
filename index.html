@@ -51,7 +51,7 @@ function unlockAudio(){
   if(audioUnlocked)return;
   audioUnlocked=true;
   // Touch all audio elements to unlock them
-  [bgmTitle,bgmStage,bgmGoal,seGo,seMiss].forEach(a=>{a.load();});
+  [bgmTitle,bgmStage,bgmGoal].forEach(a=>{a.load();});
   // Create and resume AudioContext to unlock Web Audio
   try{const ac=new(window.AudioContext||window.webkitAudioContext)();ac.resume();}catch(e){}
 }
@@ -64,13 +64,13 @@ function playBgm(bgm){
 function stopBgm(){if(curBgm){curBgm.pause();curBgm.currentTime=0;curBgm=null}}
 
 // === SE ===
-const seGo=new Audio('go.mp3');seGo.preload='auto';seGo.volume=0.6;
-const seMiss=new Audio('miss.mp3');seMiss.preload='auto';seMiss.volume=0.6;
-function playSe(se){se.currentTime=0;se.play().catch(()=>{})}
+const seGoSrc='go.mp3';
+const seMissSrc='miss.mp3';
+function playSe(src){const a=new Audio(src);a.volume=0.6;a.play().catch(()=>{})}
 
 let gs='tap',cB=1,camX=0,pX=100,pDir=1,pMov=false,pFr=0,pAT=0,fc=0;
 let hasA=false,aT=0,tTm=0,tTp='',mTm=0,mTx='',mSb='';
-let bsX=0;const BW=1400,GH=0.76;
+let bsX=0;const BW=2100,GH=0.76;
 let bL=false,bR=false,skT=0,skX=0,skY=0;
 let stars=[];for(let i=0;i<120;i++)stars.push({x:Math.random()*6000,y:Math.random()*0.38,b:Math.random(),s:0.5+Math.random()*1.5});
 
@@ -205,6 +205,12 @@ function dSign(){
   }
 }
 
+function dBackGate(){
+  const gy=H*GH,gx=bsX+BACK_X+30-camX;
+  X.fillStyle='#222';X.fillRect(gx-2,gy-68,5,70);X.fillRect(gx+42,gy-68,5,70);X.fillRect(gx-2,gy-70,49,6);
+  X.fillStyle='#FF6644';X.font='bold 13px sans-serif';X.textAlign='center';X.fillText('◀',gx+22,gy-54);
+  X.fillStyle='#AAA';X.font='8px monospace';X.fillText('BACK',gx+22,gy-43);
+}
 function dGate(){const gy=H*GH,gx=bsX+BW-30-camX;X.fillStyle='#222';X.fillRect(gx-2,gy-68,5,70);X.fillRect(gx+42,gy-68,5,70);X.fillRect(gx-2,gy-70,49,6);X.fillStyle='#FFD700';X.font='bold 13px sans-serif';X.textAlign='center';X.fillText('▶',gx+22,gy-54);X.fillStyle='#AAA';X.font='8px monospace';X.fillText('NEXT',gx+22,gy-43)}
 
 // === ANOMALY RENDERING ===
@@ -277,7 +283,7 @@ function dTitle(){
   X.fillText('画面右側タッチ → 前進',tx,H*0.58);X.fillText('画面左側タッチ → 引き返す',tx,H*0.67);X.fillText('14番地を超えればクリア！',tx,H*0.76);
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.23',W/2,H*0.98);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.26',W/2,H*0.98);
 }
 
 // === CLEAR ===
@@ -293,7 +299,8 @@ function dClear(){
 }
 
 // === GAME LOGIC ===
-function sB(){bsX=0;pX=bsX+80;camX=pX-W*0.3}
+const BACK_X=-750;// back gate position relative to bsX
+function sB(){bsX=0;pX=bsX+120;camX=pX-W*0.3}
 function sM(t,s){mTx=t;mSb=s||'';mTm=90}
 function update(){
   fc++;if(gs!=='playing')return;
@@ -304,8 +311,8 @@ function update(){
   if(bR){pX+=sp;pDir=1;pMov=true}
   if(bL){pX-=sp;pDir=-1;pMov=true}
   camX+=(pX-W*0.35-camX)*0.1;
-  if(pX<bsX-60){pX=bsX-60;if(hasA){tTp='a';tTm=30;playSe(seGo);sM('異変を発見！正解！','引き返して正解だった')}else{tTp='r';tTm=40;skT=18;playSe(seMiss);sM('異変は無かった…！','正常な道で引き返してしまった')}}
-  if(pX>bsX+BW+30){if(hasA){tTp='r';tTm=40;skT=18;playSe(seMiss);sM('異変を見逃した…！','よく観察しよう')}else{tTp='a';tTm=30;playSe(seGo);sM('正解！前進成功！')}}
+  if(pX<bsX+BACK_X){pX=bsX+BACK_X;if(hasA){tTp='a';tTm=30;playSe(seGoSrc);sM('異変を発見！正解！','引き返して正解だった')}else{tTp='r';tTm=40;skT=18;playSe(seMissSrc);sM('異変は無かった…！','正常な道で引き返してしまった')}}
+  if(pX>bsX+BW+30){if(hasA){tTp='r';tTm=40;skT=18;playSe(seMissSrc);sM('異変を見逃した…！','よく観察しよう')}else{tTp='a';tTm=30;playSe(seGoSrc);sM('正解！前進成功！')}}
   if(pMov){pAT++;if(pAT>6){pAT=0;pFr=(pFr+1)%4}}else{pFr=0;pAT=0}
 }
 
@@ -317,8 +324,8 @@ function dTap(){
   X.fillStyle='#FFF';X.font='22px sans-serif';
   X.fillText('本作品は対象年齢を2歳以上と設定しております',W/2,H*0.28);
   X.fillStyle='#CCC';X.font='16px sans-serif';
-  X.fillText('Music by 喜びおじさん',W/2,H*0.45);
-  X.fillText('Created by 喜びおじさん',W/2,H*0.53);
+  X.fillText('Music by NullPo Games',W/2,H*0.45);
+  X.fillText('Created by NullPo Games',W/2,H*0.53);
   const tapA=0.3+Math.sin(fc*0.04)*0.7;
   X.fillStyle=`rgba(200,200,200,${Math.max(0,tapA)})`;X.font='bold 56px sans-serif';
   X.fillText('Please Tap',W/2,H*0.73);
@@ -332,7 +339,7 @@ function render(){
   if(gs==='title'){dTitle();return}if(gs==='clear'){dClear();return}
   X.save();X.translate(skX,skY);
   dSky();dBld(0,0.12,H*0.22,'#060608','#18150A');dBld(1,0.3,H*0.17,'#0A0A10','#1A1708');
-  dPol();dGnd();dLmp();dSign();dGate();dAnom();
+  dPol();dGnd();dLmp();dSign();dBackGate();dGate();dAnom();
   const gy=H*GH,sx=pX-camX;
   X.fillStyle='rgba(0,0,0,0.3)';X.beginPath();X.ellipse(sx,gy+2,20,5,0,0,Math.PI*2);X.fill();
   const sprScale=Math.min(H*0.30/120,1.3);
