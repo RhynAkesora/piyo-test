@@ -51,7 +51,7 @@ function unlockAudio(){
   if(audioUnlocked)return;
   audioUnlocked=true;
   // Touch all audio elements to unlock them
-  [bgmTitle,bgmStage,bgmGoal].forEach(a=>{a.load();a.volume=1;});
+  [bgmTitle,bgmStage,bgmGoal,seGo,seMiss].forEach(a=>{a.load();});
   // Create and resume AudioContext to unlock Web Audio
   try{const ac=new(window.AudioContext||window.webkitAudioContext)();ac.resume();}catch(e){}
 }
@@ -62,6 +62,11 @@ function playBgm(bgm){
   if(bgm){bgm.currentTime=0;const p=bgm.play();if(p)p.catch(()=>{setTimeout(()=>{bgm.play().catch(()=>{})},100)})}
 }
 function stopBgm(){if(curBgm){curBgm.pause();curBgm.currentTime=0;curBgm=null}}
+
+// === SE ===
+const seGo=new Audio('go.mp3');seGo.preload='auto';seGo.volume=0.6;
+const seMiss=new Audio('miss.mp3');seMiss.preload='auto';seMiss.volume=0.6;
+function playSe(se){se.currentTime=0;se.play().catch(()=>{})}
 
 let gs='tap',cB=1,camX=0,pX=100,pDir=1,pMov=false,pFr=0,pAT=0,fc=0;
 let hasA=false,aT=0,tTm=0,tTp='',mTm=0,mTx='',mSb='';
@@ -272,7 +277,7 @@ function dTitle(){
   X.fillText('画面右側タッチ → 前進',tx,H*0.58);X.fillText('画面左側タッチ → 引き返す',tx,H*0.67);X.fillText('14番地を超えればクリア！',tx,H*0.76);
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.21',W/2,H*0.98);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.22',W/2,H*0.98);
 }
 
 // === CLEAR ===
@@ -293,7 +298,7 @@ function sM(t,s){mTx=t;mSb=s||'';mTm=90}
 function update(){
   fc++;if(gs!=='playing')return;
   if(mTm>0)mTm--;
-  if(tTm>0){tTm--;if(tTm===0){if(tTp==='a'){cB++;if(cB>14){gs='clear';playBgm(bgmGoal);return}genA();sB();sM(`${cB}番地`)}else{cB=1;genA();sB();sM('1番地に戻された…','異変の判断を間違えた')}}return}
+  if(tTm>0){tTm--;if(tTm===0){if(tTp==='a'){cB++;if(cB>14){gs='clear';playBgm(bgmGoal);return}playSe(seGo);genA();sB();sM(`${cB}番地`)}else{playSe(seMiss);cB=1;genA();sB();sM('1番地に戻された…','異変の判断を間違えた')}}return}
   if(skT>0){skT--;skX=(Math.random()-0.5)*skT*0.7;skY=(Math.random()-0.5)*skT*0.4}else{skX=0;skY=0}
   const sp=4;pMov=false;
   if(bR){pX+=sp;pDir=1;pMov=true}
