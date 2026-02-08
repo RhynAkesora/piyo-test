@@ -1,8 +1,10 @@
-const CACHE_NAME = '14banchi-v029';
+const CACHE_NAME = '14banchi-v032';
 const ASSETS = [
   './',
   './index.html',
   './piyo01.png',
+  './piyo02.png',
+  './piyo03.png',
   './icon-192.png',
   './icon-512.png',
   './14th Block Title.mp3',
