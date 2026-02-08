@@ -23,7 +23,7 @@ canvas{display:block;position:absolute;top:0;left:0}
 </style>
 </head>
 <body>
-<div id="rb"><div class="ic">📱</div><div class="mg">スマホを横に回転してください</div><div class="sb">画面ロックを解除して<br/>横画面でプレイしてください<br/><br/>※ホーム画面に追加でアプリ化</div></div>
+<div id="rb"><div class="ic">📱</div><div class="mg">スマホを横に回転してください</div><div class="sb">横画面でプレイしてください</div></div>
 <canvas id="gc"></canvas>
 <script>
 'use strict';
@@ -57,7 +57,7 @@ function unlockAudio(){
   if(audioUnlocked)return;
   audioUnlocked=true;
   // Touch all audio elements to unlock them
-  [bgmTitle,bgmStage,bgmGoal].forEach(a=>{a.load();});
+  [bgmTitle,bgmStage,bgmGoal,seGoBase,seMissBase].forEach(a=>{a.load();});
   // Create and resume AudioContext to unlock Web Audio
   try{const ac=new(window.AudioContext||window.webkitAudioContext)();ac.resume();}catch(e){}
 }
@@ -70,9 +70,13 @@ function playBgm(bgm){
 function stopBgm(){if(curBgm){curBgm.pause();curBgm.currentTime=0;curBgm=null}}
 
 // === SE ===
-const seGoSrc='go.mp3';
-const seMissSrc='miss.mp3';
-function playSe(src){const a=new Audio(src);a.volume=0.6;a.play().catch(()=>{})}
+const seGoBase=new Audio('go.mp3');seGoBase.preload='auto';seGoBase.volume=0.4;
+const seMissBase=new Audio('miss.mp3');seMissBase.preload='auto';seMissBase.volume=0.4;
+const seGoSrc='go';const seMissSrc='miss';
+function playSe(id){
+  const base=id==='go'?seGoBase:seMissBase;
+  const a=base.cloneNode();a.volume=0.4;a.play().catch(()=>{});
+}
 
 let gs='tap',cB=1,camX=0,pX=100,pDir=1,pMov=false,pFr=0,pAT=0,fc=0;
 let hasA=false,aT=0,tTm=0,tTp='',mTm=0,mTx='',mSb='';
@@ -271,6 +275,20 @@ function dUI(){
   X.globalAlpha=0.22;X.fillStyle='#88BBFF';X.font='10px sans-serif';X.textAlign='center';X.fillText('◀ 引き返す',W*0.2,H-5);
   X.fillStyle='#FFD700';X.fillText('前進 ▶',W*0.7,H-5);X.globalAlpha=1;
   if(mTm>0){const al=Math.min(1,mTm/20),mw=230,mh=mSb?46:32;X.fillStyle=`rgba(0,0,0,${al*0.8})`;X.fillRect(W/2-mw/2,H*0.12,mw,mh);X.strokeStyle=`rgba(255,215,0,${al*0.5})`;X.lineWidth=1;X.strokeRect(W/2-mw/2,H*0.12,mw,mh);X.fillStyle=`rgba(255,255,255,${al})`;X.font='bold 14px sans-serif';X.textAlign='center';X.fillText(mTx,W/2,H*0.12+20);if(mSb){X.fillStyle=`rgba(200,200,200,${al*0.8})`;X.font='11px sans-serif';X.fillText(mSb,W/2,H*0.12+36)}}
+  // Block 1 tutorial hints
+  if(cB===1&&tTm===0){
+    const hints=['ここには異変がない','この景色を覚えよ','異変がないなら進め','異変があれば引き返せ'];
+    const hIdx=Math.floor(fc/120)%hints.length;
+    const hFade=Math.sin((fc%120)/120*Math.PI);
+    X.save();
+    X.globalAlpha=hFade*0.85;
+    X.fillStyle='#CC1111';
+    X.shadowColor='#FF0000';X.shadowBlur=8;
+    X.font='bold 16px serif';X.textAlign='center';
+    X.fillText(hints[hIdx],W/2,H*0.92);
+    X.shadowColor='transparent';X.shadowBlur=0;
+    X.restore();
+  }
 }
 
 // === TITLE ===
@@ -289,7 +307,7 @@ function dTitle(){
   X.fillText('画面右側タッチ → 前進',tx,H*0.58);X.fillText('画面左側タッチ → 引き返す',tx,H*0.67);X.fillText('14番地を超えればクリア！',tx,H*0.76);
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.28',W/2,H*0.98);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.27',W/2,H*0.98);
 }
 
 // === CLEAR ===
