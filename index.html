@@ -316,9 +316,9 @@ function dGnd(){
   if(hasA&&AN[aT]==='blueGround'){c1='#0C1020';c2='#081018'}
   const g=X.createLinearGradient(0,gy,0,H);g.addColorStop(0,c1);g.addColorStop(0.1,'#0E0E14');g.addColorStop(1,c2);
   X.fillStyle=g;X.fillRect(0,gy,W,H-gy);
-  const dashSp=(hasA&&AN[aT]==='wideDash')?120:80;
+  const dashSp=80;const dashLen=(hasA&&AN[aT]==='wideDash')?55:30;
   X.fillStyle='rgba(60,60,40,0.25)';const mo=-(camX%dashSp+dashSp)%dashSp;
-  for(let i=-1;i<W/dashSp+2;i++)X.fillRect(mo+i*dashSp,gy+14,30,2);
+  for(let i=-1;i<W/dashSp+2;i++)X.fillRect(mo+i*dashSp,gy+14,dashLen,2);
   X.fillStyle='#1A1A22';X.fillRect(0,gy,W,2);
   // pebbles anomaly - small stones on road
   if(hasA&&AN[aT]==='pebbles'){
@@ -668,7 +668,7 @@ function dTitle(){
   }
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
   X.fillStyle='#887766';X.font='10px sans-serif';X.textAlign='center';X.fillText('📲 ホーム画面に追加でアプリとしてプレイできます',W/2,H*0.96);
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.fillText('Ver.0.41',W/2,H*0.99);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.fillText('Ver.0.42',W/2,H*0.99);
 }
 
 // === CLEAR ===
