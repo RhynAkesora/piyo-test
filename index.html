@@ -59,28 +59,45 @@ const bgmDeath=new Audio('14th Block Death.mp3');bgmDeath.loop=false;bgmDeath.pr
 let curBgm=null;
 let audioUnlocked=false;
 let deathTimer=0;const DEATH_FADE=90;const DEATH_BGM_DELAY=180;
+
+// === Web Audio API for SE ===
 let actx=null;
 const seBufs={};
-function getACtx(){
-  if(!actx)try{actx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}
+let seLoaded=false;
+
+function ensureACtx(){
+  if(!actx){
+    try{actx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return null}
+  }
+  if(actx.state==='suspended'||actx.state==='interrupted'){
+    actx.resume().catch(()=>{});
+  }
   return actx;
 }
-async function loadSeBuf(name,url){
+
+async function loadAllSE(){
+  if(seLoaded)return;
+  const ac=ensureACtx();if(!ac)return;
   try{
-    const ac=getACtx();if(!ac)return;
-    const res=await fetch(url);
-    const buf=await res.arrayBuffer();
-    seBufs[name]=await ac.decodeAudioData(buf);
-  }catch(e){}
+    const [goRes,missRes]=await Promise.all([fetch('go.mp3'),fetch('miss.mp3')]);
+    const [goArr,missArr]=await Promise.all([goRes.arrayBuffer(),missRes.arrayBuffer()]);
+    seBufs['go']=await new Promise((ok,ng)=>{ac.decodeAudioData(goArr,ok,ng)});
+    seBufs['miss']=await new Promise((ok,ng)=>{ac.decodeAudioData(missArr,ok,ng)});
+    seLoaded=true;
+  }catch(e){seLoaded=false}
 }
+
 function unlockAudio(){
   if(audioUnlocked)return;
   audioUnlocked=true;
   [bgmTitle,bgmStage,bgmGoal,bgmDeath].forEach(a=>{a.load();});
-  const ac=getACtx();
-  if(ac&&ac.state==='suspended')ac.resume();
-  loadSeBuf('go','go.mp3');
-  loadSeBuf('miss','miss.mp3');
+  const ac=ensureACtx();
+  if(ac){
+    const sil=ac.createBuffer(1,1,22050);
+    const s=ac.createBufferSource();
+    s.buffer=sil;s.connect(ac.destination);s.start(0);
+    loadAllSE();
+  }
 }
 function playBgm(bgm){
   if(curBgm===bgm&&!curBgm.paused)return;
@@ -90,17 +107,21 @@ function playBgm(bgm){
 }
 function stopBgm(){if(curBgm){curBgm.pause();curBgm.currentTime=0;curBgm=null}}
 
-// === SE (Web Audio API) ===
+// === SE PLAYBACK ===
 const seGoSrc='go';const seMissSrc='miss';
 function playSe(id){
-  const ac=getACtx();if(!ac)return;
+  const ac=ensureACtx();if(!ac)return;
+  // If SE not loaded yet, try loading now
+  if(!seLoaded){loadAllSE();return}
   const buf=seBufs[id];if(!buf)return;
-  const src=ac.createBufferSource();
-  const gain=ac.createGain();
-  src.buffer=buf;
-  gain.gain.value=0.4;
-  src.connect(gain);gain.connect(ac.destination);
-  src.start(0);
+  try{
+    const src=ac.createBufferSource();
+    const gain=ac.createGain();
+    src.buffer=buf;
+    gain.gain.value=0.3;
+    src.connect(gain);gain.connect(ac.destination);
+    src.start(0);
+  }catch(e){}
 }
 
 let gs='tap',cB=1,camX=0,pX=100,pDir=1,pMov=false,pFr=0,pAT=0,fc=0;
@@ -339,7 +360,7 @@ function dTitle(){
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
   X.fillStyle='#887766';X.font='11px sans-serif';X.textAlign='center';X.fillText('📲 ホーム画面に追加でアプリとしてプレイできます',W/2,H*0.96);
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.33',W/2,H*0.99);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.34',W/2,H*0.99);
 }
 
 // === CLEAR ===
@@ -469,11 +490,15 @@ function render(){
 function loop(){update();render();requestAnimationFrame(loop)}
 
 // === INPUT ===
-function hS(e){e.preventDefault();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle);return}if(gs==='dying')return;const rc=C.getBoundingClientRect(),ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];for(let t of ts){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
+// iOS PWA: resume AudioContext on every user interaction
+function touchResume(){if(actx&&(actx.state==='suspended'||actx.state==='interrupted'))actx.resume().catch(()=>{});}
+// iOS PWA: recover AudioContext when app returns from background
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)touchResume();});
+function hS(e){e.preventDefault();touchResume();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle);return}if(gs==='dying')return;const rc=C.getBoundingClientRect(),ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];for(let t of ts){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
 function uT(e){e.preventDefault();if(gs!=='playing')return;bL=false;bR=false;const rc=C.getBoundingClientRect();if(e.touches)for(let t of e.touches){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
 function hE(e){e.preventDefault();if(e.touches&&e.touches.length>0)uT(e);else{bL=false;bR=false}}
 C.addEventListener('touchstart',hS,{passive:false});C.addEventListener('touchmove',uT,{passive:false});C.addEventListener('touchend',hE,{passive:false});C.addEventListener('touchcancel',hE,{passive:false});
-C.addEventListener('mousedown',(e)=>{e.preventDefault();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle);return}if(gs==='dying')return;if(e.clientX<W*0.4)bL=true;else bR=true});
+C.addEventListener('mousedown',(e)=>{e.preventDefault();touchResume();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle);return}if(gs==='dying')return;if(e.clientX<W*0.4)bL=true;else bR=true});
 C.addEventListener('mouseup',()=>{bL=false;bR=false});C.addEventListener('mouseleave',()=>{bL=false;bR=false});
 document.addEventListener('keydown',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=true;if(e.key==='ArrowLeft'||e.key==='a')bL=true;if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle)}else if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…')}else if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle)}});
 document.addEventListener('keyup',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=false;if(e.key==='ArrowLeft'||e.key==='a')bL=false});
