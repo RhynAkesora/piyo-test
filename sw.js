@@ -1,4 +1,4 @@
-const CACHE_NAME = '14banchi-v035';
+const CACHE_NAME = '14banchi-v038';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
   './14th Block Stage.mp3',
   './14th Block Goal.mp3',
   './14th Block Death.mp3',
+  './14th Block Ranking.mp3',
   './go.mp3',
   './miss.mp3'
 ];
