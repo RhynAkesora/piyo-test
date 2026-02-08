@@ -194,8 +194,9 @@ function playSe(id){
 
 let gs='tap',cB=1,camX=0,pX=100,pDir=1,pMov=false,pFr=0,pAT=0,fc=0;
 let hasA=false,aT=0,tTm=0,tTp='',mTm=0,mTx='',mSb='';
-let bsX=0;const BW=2100,GH=0.76;
+let bsX=0;let BW=2100;const BW_NORMAL=2100;const BW_SHORT=1890;const GH=0.76;
 let bL=false,bR=false,skT=0,skX=0,skY=0;
+let runnerX=0,runnerActive=false;// runnerPiyo state
 let stars=[];for(let i=0;i<120;i++)stars.push({x:Math.random()*6000,y:Math.random()*0.38,b:Math.random(),s:0.5+Math.random()*1.5});
 
 // === DRAW PLAYER ===
@@ -206,7 +207,7 @@ function drawPG(cx,cy,scale){
   const img=SPR[key];if(!img||!img.complete)return;
   const sw=img.naturalWidth*scale,sh=img.naturalHeight*scale;
   const bob=pMov?Math.sin(fc*0.3)*1.5:0;
-  X.drawImage(img,cx-sw/2,cy-sh+bob,sw,sh);
+  X.drawImage(img,cx-sw/2,cy-sh+bob+4,sw,sh);
 }
 
 // === DECO ===
@@ -236,11 +237,21 @@ const AN=[
   'tooManyLamps',  // 18: 街灯が異常に多い
   'heartbeat','creep','wizard',
   'earthquake',    // 地震が起きる
-  'tokyoTower',    // 東京タワーが見える
-  'wrongMoon',     // 月の模様が違う
+  'tokyoTower',    // 遠くに東京タワーが見える
+  'wrongMoon',     // 月の模様が微妙に違う
   'evilFog',       // 邪悪な霧
+  'whiteLamp',     // 街灯の光が白い
+  'orangeLamp',    // 街灯の光がオレンジ色
+  'blueGround',    // 地面が青い
+  'redStar',       // 空に赤い星がある
+  'runnerPiyo',    // もう一人のぴよ氏が走ってくる
+  'wideDash',      // 地面の点線の間隔が広い
+  'tallLamp',      // 街灯の高さが高い
+  'shortBlock',    // NEXTまでの距離が短い
+  'pebbles',       // 道路に石ころが落ちている
 ];
 function genA(){
+  BW=BW_NORMAL;runnerActive=false;
   if(gameMode==='normal'){
     if(cB<=1||cB>=14){hasA=false;return}
     hasA=Math.random()<0.55;
@@ -248,7 +259,11 @@ function genA(){
     if(cB<=1){hasA=false;return}
     hasA=Math.random()<0.55;
   }
-  if(hasA)aT=Math.floor(Math.random()*AN.length);
+  if(hasA){
+    aT=Math.floor(Math.random()*AN.length);
+    if(AN[aT]==='shortBlock')BW=BW_SHORT;
+    if(AN[aT]==='runnerPiyo'){runnerX=bsX+BW+300;runnerActive=true}
+  }
 }
 
 // === SCENERY ===
@@ -266,10 +281,30 @@ function dSky(){
     const mx=W*0.8,my=H*0.12,mr=48+Math.sin(fc*0.015)*5;
     const mg=X.createRadialGradient(mx,my,0,mx,my,mr);mg.addColorStop(0,'#CC2200');mg.addColorStop(0.5,'#881100');mg.addColorStop(1,'transparent');
     X.fillStyle=mg;X.beginPath();X.arc(mx,my,mr,0,Math.PI*2);X.fill();
+  }else if(hasA&&AN[aT]==='wrongMoon'){
+    // Same position/size as normal moon but with subtle creepy face
+    const mx=W*0.85,my=H*0.1,mr=15;
+    const mg=X.createRadialGradient(mx-2,my-2,0,mx,my,mr);mg.addColorStop(0,'#EEEEDD');mg.addColorStop(0.8,'#AAAA88');mg.addColorStop(1,'transparent');
+    X.fillStyle=mg;X.beginPath();X.arc(mx,my,mr,0,Math.PI*2);X.fill();
+    // Subtle creepy face on the moon
+    X.fillStyle='rgba(60,60,40,0.5)';
+    X.beginPath();X.arc(mx-4,my-3,2.5,0,Math.PI*2);X.fill();
+    X.beginPath();X.arc(mx+4,my-3,2.5,0,Math.PI*2);X.fill();
+    // Slight grin
+    X.strokeStyle='rgba(60,60,40,0.5)';X.lineWidth=1;
+    X.beginPath();X.arc(mx,my+2,5,0.15*Math.PI,0.85*Math.PI);X.stroke();
   }else{
     const mx=W*0.85,my=H*0.1,mr=15;
     const mg=X.createRadialGradient(mx-2,my-2,0,mx,my,mr);mg.addColorStop(0,'#EEEEDD');mg.addColorStop(0.8,'#AAAA88');mg.addColorStop(1,'transparent');
     X.fillStyle=mg;X.beginPath();X.arc(mx,my,mr,0,Math.PI*2);X.fill();
+  }
+  // redStar anomaly - a few faint red stars
+  if(hasA&&AN[aT]==='redStar'){
+    const rStars=[[W*0.15,H*0.08],[W*0.45,H*0.05],[W*0.7,H*0.14]];
+    for(const rs of rStars){
+      const br=0.25+Math.sin(fc*0.03+rs[0])*0.1;
+      X.fillStyle=`rgba(255,60,60,${br})`;X.beginPath();X.arc(rs[0],rs[1],1.2,0,Math.PI*2);X.fill();
+    }
   }
 }
 
@@ -278,11 +313,25 @@ function dBld(ly,sp,bH,col,wc){const sd=cB*7+ly*31,ox=-((camX*sp)%160+160)%160;f
 function dGnd(){
   const gy=H*GH;let c1='#111118',c2='#0A0A0E';
   if(hasA&&AN[aT]==='weirdGround'){c1='#181010';c2='#120808'}
+  if(hasA&&AN[aT]==='blueGround'){c1='#0C1020';c2='#081018'}
   const g=X.createLinearGradient(0,gy,0,H);g.addColorStop(0,c1);g.addColorStop(0.1,'#0E0E14');g.addColorStop(1,c2);
   X.fillStyle=g;X.fillRect(0,gy,W,H-gy);
-  X.fillStyle='rgba(60,60,40,0.25)';const mo=-(camX%80+80)%80;
-  for(let i=-1;i<W/80+2;i++)X.fillRect(mo+i*80,gy+14,30,2);
+  const dashSp=(hasA&&AN[aT]==='wideDash')?120:80;
+  X.fillStyle='rgba(60,60,40,0.25)';const mo=-(camX%dashSp+dashSp)%dashSp;
+  for(let i=-1;i<W/dashSp+2;i++)X.fillRect(mo+i*dashSp,gy+14,30,2);
   X.fillStyle='#1A1A22';X.fillRect(0,gy,W,2);
+  // pebbles anomaly - small stones on road
+  if(hasA&&AN[aT]==='pebbles'){
+    const sd2=cB*333;
+    X.fillStyle='rgba(80,75,65,0.5)';
+    for(let i=0;i<8;i++){
+      const px2=((sd2+i*271)%BW)+bsX-camX;
+      if(px2<-10||px2>W+10)continue;
+      const py2=gy+8+((sd2+i*47)%12);
+      const pr=1.5+((sd2+i*83)%2);
+      X.beginPath();X.ellipse(px2,py2,pr,pr*0.6,((sd2+i)%3)*0.5,0,Math.PI*2);X.fill();
+    }
+  }
   // Anomaly: cracks
   if(hasA&&AN[aT]==='cracks'){
     X.strokeStyle='rgba(40,0,0,0.7)';X.lineWidth=2;
@@ -301,14 +350,20 @@ function dGnd(){
 function dLmp(){
   const gy=H*GH;
   const isTooMany=hasA&&AN[aT]==='tooManyLamps';
+  const isTall=hasA&&AN[aT]==='tallLamp';
   const sp=isTooMany?80:300;
   const ox=-((camX*0.95)%sp+sp)%sp;
   const fl=hasA&&AN[aT]==='flickerLamp';
+  const lampH=isTall?115:90;
+  // Light color: normal=warm yellow, whiteLamp=cool white, orangeLamp=deeper orange
+  let lCol='rgba(255,200,100,0.35)',bCol='#FFD070';
+  if(hasA&&AN[aT]==='whiteLamp'){lCol='rgba(220,225,255,0.4)';bCol='#DDE0FF'}
+  if(hasA&&AN[aT]==='orangeLamp'){lCol='rgba(255,160,40,0.4)';bCol='#FFA028'}
   for(let i=-1;i<(W/sp)+2;i++){
     const lx=ox+i*sp+(isTooMany?40:150);
-    X.fillStyle='#2A2A30';X.fillRect(lx,gy-90,3,92);X.fillRect(lx-5,gy-90,13,3);
+    X.fillStyle='#2A2A30';X.fillRect(lx,gy-lampH,3,lampH+2);X.fillRect(lx-5,gy-lampH,13,3);
     const on=fl?(Math.random()>0.4^(fc%6<3)):true;
-    if(on){const lg=X.createRadialGradient(lx+1,gy-88,0,lx+1,gy-88,40);lg.addColorStop(0,'rgba(255,200,100,0.35)');lg.addColorStop(1,'transparent');X.fillStyle=lg;X.beginPath();X.arc(lx+1,gy-88,40,0,Math.PI*2);X.fill();X.fillStyle='#FFD070';X.fillRect(lx-2,gy-90,7,3)}
+    if(on){const lg=X.createRadialGradient(lx+1,gy-lampH+2,0,lx+1,gy-lampH+2,40);lg.addColorStop(0,lCol);lg.addColorStop(1,'transparent');X.fillStyle=lg;X.beginPath();X.arc(lx+1,gy-lampH+2,40,0,Math.PI*2);X.fill();X.fillStyle=bCol;X.fillRect(lx-2,gy-lampH,7,3)}
   }
 }
 
@@ -390,13 +445,13 @@ function dAnom(){
   if(a==='ghost'){const gx=bsX+BW*0.5-camX,al=0.15+Math.sin(fc*0.03)*0.1,yo=Math.sin(fc*0.02)*7;X.globalAlpha=al;X.fillStyle='#FFF';X.beginPath();X.ellipse(gx,gy-48+yo,16,26,0,0,Math.PI*2);X.fill();X.fillStyle='#000';X.beginPath();X.arc(gx-5,gy-53+yo,2.5,0,Math.PI*2);X.fill();X.beginPath();X.arc(gx+5,gy-53+yo,2.5,0,Math.PI*2);X.fill();X.beginPath();X.arc(gx,gy-44+yo,3.5,0,Math.PI);X.fill();X.globalAlpha=1}
 
   // thug
-  if(a==='thug'){const ti=SPR['thug'];if(ti&&ti.complete){const tx=bsX+BW*0.5-camX;const tsc=Math.min(H*0.32/120,1.4);const tw=ti.naturalWidth*tsc,th=ti.naturalHeight*tsc;const breathe=Math.sin(fc*0.04)*1.5;X.drawImage(ti,tx-tw/2,gy-th+breathe,tw,th)}}
+  if(a==='thug'){const ti=SPR['thug'];if(ti&&ti.complete){const tx=bsX+BW*0.5-camX;const tsc=Math.min(H*0.32/120,1.4);const tw=ti.naturalWidth*tsc,th=ti.naturalHeight*tsc;const breathe=Math.sin(fc*0.04)*1.5;X.drawImage(ti,tx-tw/2,gy-th+breathe+4,tw,th)}}
 
   // creep - hoodie figure standing eerily
-  if(a==='creep'){const ci=SPR['creep'];if(ci&&ci.complete){const cx=bsX+BW*0.55-camX;const csc=Math.min(H*0.32/120,1.4);const cw=ci.naturalWidth*csc,ch2=ci.naturalHeight*csc;const sway=Math.sin(fc*0.025)*2;X.drawImage(ci,cx-cw/2+sway,gy-ch2,cw,ch2)}}
+  if(a==='creep'){const ci=SPR['creep'];if(ci&&ci.complete){const cx=bsX+BW*0.55-camX;const csc=Math.min(H*0.32/120,1.4);const cw=ci.naturalWidth*csc,ch2=ci.naturalHeight*csc;const sway=Math.sin(fc*0.025)*2;X.drawImage(ci,cx-cw/2+sway,gy-ch2+4,cw,ch2)}}
 
   // wizard - crying wizard at desk
-  if(a==='wizard'){const wi=SPR['wizard'];if(wi&&wi.complete){const wx=bsX+BW*0.45-camX;const wsc=Math.min(H*0.30/120,1.3);const ww=wi.naturalWidth*wsc,wh=wi.naturalHeight*wsc;const bob=Math.sin(fc*0.05)*1.5;X.drawImage(wi,wx-ww/2,gy-wh+bob,ww,wh)}}
+  if(a==='wizard'){const wi=SPR['wizard'];if(wi&&wi.complete){const wx=bsX+BW*0.45-camX;const wsc=Math.min(H*0.30/120,1.3);const ww=wi.naturalWidth*wsc,wh=wi.naturalHeight*wsc;const bob=Math.sin(fc*0.05)*1.5;X.drawImage(wi,wx-ww/2,gy-wh+bob+4,ww,wh)}}
 
   // foggy
   if(a==='foggy'){for(let i=0;i<8;i++){const fx=((fc*0.3+i*200+sd)%(W+200))-100;const fy=H*0.3+((sd+i*77)%(H*0.35));const fw=120+((sd+i*53)%80);const al=0.06+Math.sin(fc*0.01+i)*0.03;X.fillStyle=`rgba(180,180,200,${al})`;X.beginPath();X.ellipse(fx,fy,fw,25+i*3,0,0,Math.PI*2);X.fill()}}
@@ -416,48 +471,36 @@ function dAnom(){
 
   // earthquake - screen shakes periodically with SE
   if(a==='earthquake'){
-    const qCycle=180;const qPhase=fc%qCycle;
-    if(qPhase<30){
-      const intensity=(1-qPhase/30)*6;
-      skX=(Math.random()-0.5)*intensity;
-      skY=(Math.random()-0.5)*intensity*0.5;
-    }
+    const qCycle=120;const qPhase=fc%qCycle;
+    if(qPhase<60){
+      const intensity=qPhase<30?(qPhase/30)*8:(1-(qPhase-30)/30)*8;
+      skX=Math.sin(fc*1.3)*(intensity)+((Math.random()-0.5)*intensity*0.5);
+      skY=Math.cos(fc*1.7)*(intensity*0.6)+((Math.random()-0.5)*intensity*0.3);
+    }else{skX=0;skY=0}
     if(qPhase===0)playSe('quake');
   }
 
-  // tokyoTower - red Tokyo Tower silhouette in background
+  // tokyoTower - red Tokyo Tower silhouette far in background (small, distant)
   if(a==='tokyoTower'){
-    const tx=bsX+BW*0.6-camX;
-    X.fillStyle='rgba(180,30,30,0.4)';
+    const tx=bsX+BW*0.5-camX*0.15;// parallax - moves slowly like distant object
+    const tScale=0.35;// small = far away
+    X.fillStyle='rgba(130,25,25,0.25)';
     // Tower body
-    X.beginPath();X.moveTo(tx,gy-130);X.lineTo(tx-18,gy);X.lineTo(tx+18,gy);X.closePath();X.fill();
+    const tBase=gy,tTop=tBase-180*tScale;
+    X.beginPath();X.moveTo(tx,tTop);X.lineTo(tx-18*tScale,tBase);X.lineTo(tx+18*tScale,tBase);X.closePath();X.fill();
     // Observation deck
-    X.fillRect(tx-12,gy-90,24,5);
-    X.fillRect(tx-8,gy-65,16,4);
+    X.fillRect(tx-12*tScale,tBase-90*tScale,24*tScale,3);
+    X.fillRect(tx-8*tScale,tBase-65*tScale,16*tScale,2);
     // Antenna
-    X.fillRect(tx-1,gy-150,2,20);
+    X.fillRect(tx-0.5,tTop-20*tScale,1,20*tScale);
     // Red light blinking
     if(Math.sin(fc*0.1)>0){
-      X.fillStyle='rgba(255,0,0,0.7)';X.beginPath();X.arc(tx,gy-150,3,0,Math.PI*2);X.fill();
+      X.fillStyle='rgba(255,0,0,0.6)';X.beginPath();X.arc(tx,tTop-20*tScale,1.5,0,Math.PI*2);X.fill();
     }
   }
 
-  // wrongMoon - moon has a creepy face pattern instead of normal craters
-  if(a==='wrongMoon'){
-    const mx=W*0.82,my=H*0.12,mr=22;
-    X.fillStyle='#EEE8AA';X.beginPath();X.arc(mx,my,mr,0,Math.PI*2);X.fill();
-    // Creepy face on moon
-    X.fillStyle='#444';
-    X.beginPath();X.arc(mx-7,my-5,4,0,Math.PI*2);X.fill();
-    X.beginPath();X.arc(mx+7,my-5,4,0,Math.PI*2);X.fill();
-    // Grinning mouth
-    X.strokeStyle='#333';X.lineWidth=2;
-    X.beginPath();X.arc(mx,my+4,9,0.1*Math.PI,0.9*Math.PI);X.stroke();
-    // Teeth
-    for(let i=-6;i<=6;i+=3){
-      X.fillStyle='#333';X.fillRect(mx+i,my+10,2,3);
-    }
-  }
+  // wrongMoon - subtle creepy modifications to the normal moon (drawn in dSky, so skip normal moon for this)
+  // Note: wrongMoon replaces normal moon rendering - see dSky
 
   // evilFog - dark red fog sweeping from right to left, kills on contact
   if(a==='evilFog'){
@@ -487,6 +530,26 @@ function dAnom(){
       if(elapsed===fogDelay+1)playSe('foghorn');
     }
   }
+
+  // runnerPiyo - another piyo sprinting from right to left
+  if(a==='runnerPiyo'&&runnerActive){
+    const rsx=runnerX-camX;
+    if(rsx>-60&&rsx<W+60){
+      const sprScale=Math.min(H*0.30/120,1.3);
+      const fr=WALK_L[(Math.floor(fc/3))%WALK_L.length];
+      const img=SPR[fr];if(img&&img.complete){
+        const sw=img.naturalWidth*sprScale,sh=img.naturalHeight*sprScale;
+        const bob2=Math.sin(fc*0.5)*1.5;
+        X.drawImage(img,rsx-sw/2,gy-sh+bob2+4,sw,sh);
+      }
+      // Warning text
+      if(runnerX-pX<400&&runnerX-pX>0){
+        const warnAl=0.5+Math.sin(fc*0.12)*0.5;
+        X.fillStyle=`rgba(255,50,50,${warnAl})`;X.font='bold 16px serif';X.textAlign='center';
+        X.fillText('！逃げろ！',W/2,H*0.15);
+      }
+    }
+  }
 }
 
 // === UI ===
@@ -500,12 +563,12 @@ function dUI(){
   X.globalAlpha=0.22;X.fillStyle='#88BBFF';X.font='10px sans-serif';X.textAlign='center';X.fillText('◀ 引き返す',W*0.2,H-5);
   X.fillStyle='#FFD700';X.fillText('前進 ▶',W*0.7,H-5);X.globalAlpha=1;
   // Pause button (right of moon)
-  const px=W*0.93,py=6,pw=22,ph=22;
+  const px=W*0.89,py=3,pw=34,ph=28;
   pauseBtn.x=px;pauseBtn.y=py;pauseBtn.w=pw;pauseBtn.h=ph;
-  X.fillStyle='rgba(0,0,0,0.5)';X.fillRect(px,py,pw,ph);
+  X.fillStyle='rgba(0,0,0,0.55)';X.fillRect(px,py,pw,ph);
   X.strokeStyle='rgba(255,255,255,0.4)';X.lineWidth=1;X.strokeRect(px,py,pw,ph);
   X.fillStyle='rgba(255,255,255,0.7)';
-  X.fillRect(px+6,py+5,4,12);X.fillRect(px+12,py+5,4,12);
+  X.fillRect(px+9,py+6,5,16);X.fillRect(px+19,py+6,5,16);
   if(mTm>0){const al=Math.min(1,mTm/20),mw=230,mh=mSb?46:32;X.fillStyle=`rgba(0,0,0,${al*0.8})`;X.fillRect(W/2-mw/2,H*0.12,mw,mh);X.strokeStyle=`rgba(255,215,0,${al*0.5})`;X.lineWidth=1;X.strokeRect(W/2-mw/2,H*0.12,mw,mh);X.fillStyle=`rgba(255,255,255,${al})`;X.font='bold 14px sans-serif';X.textAlign='center';X.fillText(mTx,W/2,H*0.12+20);if(mSb){X.fillStyle=`rgba(200,200,200,${al*0.8})`;X.font='11px sans-serif';X.fillText(mSb,W/2,H*0.12+36)}}
   // Block 1 tutorial hints
   if(cB===1&&tTm===0){
@@ -605,7 +668,7 @@ function dTitle(){
   }
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
   X.fillStyle='#887766';X.font='10px sans-serif';X.textAlign='center';X.fillText('📲 ホーム画面に追加でアプリとしてプレイできます',W/2,H*0.96);
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.fillText('Ver.0.38',W/2,H*0.99);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.fillText('Ver.0.39',W/2,H*0.99);
 }
 
 // === CLEAR ===
@@ -749,6 +812,14 @@ function update(){
           gs='dying';deathTimer=0;bL=false;bR=false;pMov=false;
           stopBgm();playSe(seMissSrc);
         }
+      }
+    }
+    // runnerPiyo collision - another piyo running at you
+    if(a==='runnerPiyo'&&runnerActive){
+      runnerX-=4;// same speed as player
+      if(Math.abs(pX-runnerX)<30){
+        gs='dying';deathTimer=0;bL=false;bR=false;pMov=false;
+        stopBgm();playSe(seMissSrc);
       }
     }
   }
