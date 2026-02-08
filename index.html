@@ -10,6 +10,8 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>14番地</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -56,9 +58,65 @@ const bgmTitle=new Audio('14th Block Title.mp3');bgmTitle.loop=true;bgmTitle.pre
 const bgmStage=new Audio('14th Block Stage.mp3');bgmStage.loop=true;bgmStage.preload='auto';
 const bgmGoal=new Audio('14th Block Goal.mp3');bgmGoal.loop=false;bgmGoal.preload='auto';
 const bgmDeath=new Audio('14th Block Death.mp3');bgmDeath.loop=false;bgmDeath.preload='auto';
+const bgmRanking=new Audio('14th Block Ranking.mp3');bgmRanking.loop=true;bgmRanking.preload='auto';
 let curBgm=null;
 let audioUnlocked=false;
 let deathTimer=0;const DEATH_FADE=90;const DEATH_BGM_DELAY=180;
+
+// === GAME MODE ===
+let gameMode='normal'; // 'normal' or 'challenge'
+let titleSel=0; // 0=normal, 1=challenge, 2=ranking
+let rankData=[];
+let rankLoaded=false;
+let nameInput='';
+let nameInputActive=false;
+let showNameEntry=false;
+let challengeScore=0;
+const CHALLENGE_MAX=500;
+
+// === FIREBASE ===
+let db=null;
+try{
+  firebase.initializeApp({
+    apiKey:"AIzaSyDummy_REPLACE_WITH_YOUR_KEY",
+    authDomain:"block14-ranking.firebaseapp.com",
+    projectId:"block14-ranking"
+  });
+  db=firebase.firestore();
+}catch(e){console.log('Firebase init skipped - using local fallback')}
+
+async function loadRanking(){
+  rankData=[];rankLoaded=false;
+  if(db){
+    try{
+      const snap=await db.collection('rankings').orderBy('score','desc').limit(10).get();
+      snap.forEach(d=>{const v=d.data();rankData.push({name:v.name,score:v.score,hall:v.hall||false})});
+    }catch(e){}
+  }
+  // Also load from localStorage as fallback
+  if(rankData.length===0){
+    try{const ls=JSON.parse(localStorage.getItem('14b_rank')||'[]');rankData=ls.slice(0,10)}catch(e){}
+  }
+  rankLoaded=true;
+}
+async function saveRanking(name,score){
+  const hall=score>=CHALLENGE_MAX;
+  const entry={name,score,hall,date:Date.now()};
+  // Save to Firebase
+  if(db){try{await db.collection('rankings').add(entry)}catch(e){}}
+  // Also save to localStorage
+  try{
+    const ls=JSON.parse(localStorage.getItem('14b_rank')||'[]');
+    ls.push(entry);ls.sort((a,b)=>b.score-a.score);
+    localStorage.setItem('14b_rank',JSON.stringify(ls.slice(0,10)));
+  }catch(e){}
+  await loadRanking();
+}
+function isRankIn(score){
+  if(rankData.length<10)return true;
+  return score>rankData[rankData.length-1].score;
+}
+loadRanking();
 
 // === Web Audio API for SE ===
 let actx=null;
@@ -100,7 +158,7 @@ async function loadAllSE(){
 function unlockAudio(){
   if(audioUnlocked)return;
   audioUnlocked=true;
-  [bgmTitle,bgmStage,bgmGoal,bgmDeath].forEach(a=>{a.load();});
+  [bgmTitle,bgmStage,bgmGoal,bgmDeath,bgmRanking].forEach(a=>{a.load();});
   const ac=ensureACtx();
   if(ac){
     const sil=ac.createBuffer(1,1,22050);
@@ -119,7 +177,7 @@ function stopBgm(){if(curBgm){curBgm.pause();curBgm.currentTime=0;curBgm=null}}
 
 // === SE PLAYBACK ===
 const seGoSrc='go';const seMissSrc='miss';
-const seVols={'go':0.3,'miss':0.5,'quake':0.25,'foghorn':0.3};
+const seVols={'go':0.3,'miss':0.7,'quake':0.25,'foghorn':0.3};
 function playSe(id){
   const ac=ensureACtx();if(!ac)return;
   if(!seLoaded){loadAllSE();return}
@@ -182,7 +240,16 @@ const AN=[
   'wrongMoon',     // 月の模様が違う
   'evilFog',       // 邪悪な霧
 ];
-function genA(){if(cB<=1||cB>=14){hasA=false;return}hasA=Math.random()<0.55;if(hasA)aT=Math.floor(Math.random()*AN.length)}
+function genA(){
+  if(gameMode==='normal'){
+    if(cB<=1||cB>=14){hasA=false;return}
+    hasA=Math.random()<0.55;
+  }else{
+    if(cB<=1){hasA=false;return}
+    hasA=Math.random()<0.55;
+  }
+  if(hasA)aT=Math.floor(Math.random()*AN.length);
+}
 
 // === SCENERY ===
 function dSky(){
@@ -423,12 +490,22 @@ function dAnom(){
 }
 
 // === UI ===
+// Pause button hit area (right of moon at W*0.8)
+const pauseBtn={x:0,y:0,w:0,h:0};
 function dUI(){
   X.fillStyle='rgba(0,0,0,0.7)';X.fillRect(W/2-58,4,116,26);
   X.strokeStyle='#FFD700';X.lineWidth=1.5;X.strokeRect(W/2-58,4,116,26);
-  X.fillStyle='#FFD700';X.font='bold 14px monospace';X.textAlign='center';X.fillText(`${cB} / 14 番地`,W/2,22);
+  X.fillStyle='#FFD700';X.font='bold 14px monospace';X.textAlign='center';
+  X.fillText(gameMode==='normal'?`${cB} / 14 番地`:`${cB} 番地`,W/2,22);
   X.globalAlpha=0.22;X.fillStyle='#88BBFF';X.font='10px sans-serif';X.textAlign='center';X.fillText('◀ 引き返す',W*0.2,H-5);
   X.fillStyle='#FFD700';X.fillText('前進 ▶',W*0.7,H-5);X.globalAlpha=1;
+  // Pause button (right of moon)
+  const px=W*0.93,py=6,pw=22,ph=22;
+  pauseBtn.x=px;pauseBtn.y=py;pauseBtn.w=pw;pauseBtn.h=ph;
+  X.fillStyle='rgba(0,0,0,0.5)';X.fillRect(px,py,pw,ph);
+  X.strokeStyle='rgba(255,255,255,0.4)';X.lineWidth=1;X.strokeRect(px,py,pw,ph);
+  X.fillStyle='rgba(255,255,255,0.7)';
+  X.fillRect(px+6,py+5,4,12);X.fillRect(px+12,py+5,4,12);
   if(mTm>0){const al=Math.min(1,mTm/20),mw=230,mh=mSb?46:32;X.fillStyle=`rgba(0,0,0,${al*0.8})`;X.fillRect(W/2-mw/2,H*0.12,mw,mh);X.strokeStyle=`rgba(255,215,0,${al*0.5})`;X.lineWidth=1;X.strokeRect(W/2-mw/2,H*0.12,mw,mh);X.fillStyle=`rgba(255,255,255,${al})`;X.font='bold 14px sans-serif';X.textAlign='center';X.fillText(mTx,W/2,H*0.12+20);if(mSb){X.fillStyle=`rgba(200,200,200,${al*0.8})`;X.font='11px sans-serif';X.fillText(mSb,W/2,H*0.12+36)}}
   // Block 1 tutorial hints
   if(cB===1&&tTm===0){
@@ -446,7 +523,61 @@ function dUI(){
   }
 }
 
+// === PAUSE ===
+let pauseSel=0;// 0=resume, 1=retire
+const pauseBtns=[];
+function dPause(){
+  // Dark overlay on game scene
+  X.save();X.translate(skX,skY);
+  dSky();dBld(0,0.12,H*0.22,'#060608','#18150A');dBld(1,0.3,H*0.17,'#0A0A10','#1A1708');
+  dPol();dGnd();dLmp();dSign();dBackGate();dGate();dAnom();
+  const gy=H*GH,sx=pX-camX;
+  X.fillStyle='rgba(0,0,0,0.3)';X.beginPath();X.ellipse(sx,gy+2,20,5,0,0,Math.PI*2);X.fill();
+  const sprScale=Math.min(H*0.30/120,1.3);
+  drawPG(sx,gy,sprScale);
+  X.restore();
+  // Dark overlay
+  X.fillStyle='rgba(0,0,0,0.65)';X.fillRect(0,0,W,H);
+  // Pause panel
+  const panW=220,panH=160,panX=(W-panW)/2,panY=(H-panH)/2;
+  X.fillStyle='rgba(10,10,20,0.9)';X.fillRect(panX,panY,panW,panH);
+  X.strokeStyle='#FFD700';X.lineWidth=2;X.strokeRect(panX,panY,panW,panH);
+  // Pause icon
+  X.fillStyle='#FFD700';
+  X.fillRect(W/2-12,panY+18,8,24);X.fillRect(W/2+4,panY+18,8,24);
+  // PAUSE text
+  X.fillStyle='#FFD700';X.font='bold 18px sans-serif';X.textAlign='center';
+  X.fillText('PAUSE',W/2,panY+62);
+  // Buttons
+  pauseBtns.length=0;
+  const btnW=160,btnH=32;
+  const labels=[['▶ 再開','#44CC44'],['✖ リタイヤ','#CC4444']];
+  for(let i=0;i<2;i++){
+    const bx=W/2-btnW/2,by=panY+78+i*40;
+    pauseBtns.push({x:bx,y:by,w:btnW,h:btnH,id:i});
+    X.fillStyle='rgba(255,255,255,0.05)';X.fillRect(bx,by,btnW,btnH);
+    X.strokeStyle=labels[i][1];X.lineWidth=2;X.strokeRect(bx,by,btnW,btnH);
+    X.fillStyle=labels[i][1];X.font='bold 15px sans-serif';X.textAlign='center';
+    X.fillText(labels[i][0],W/2,by+btnH/2+5);
+  }
+}
+
+function handlePauseTap(cx,cy){
+  for(const b of pauseBtns){
+    if(cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h){
+      if(b.id===0){gs='playing';return true}// Resume
+      if(b.id===1){gs='title';playBgm(bgmTitle);return true}// Retire
+    }
+  }
+  return false;
+}
+
+function hitPauseBtn(cx,cy){
+  return cx>=pauseBtn.x&&cx<=pauseBtn.x+pauseBtn.w&&cy>=pauseBtn.y&&cy<=pauseBtn.y+pauseBtn.h;
+}
+
 // === TITLE ===
+const titleBtns=[];// populated in dTitle
 function dTitle(){
   const bg=X.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#FFF8E8');bg.addColorStop(1,'#FFF0D0');X.fillStyle=bg;X.fillRect(0,0,W,H);
   const t=fc*0.025;
@@ -455,15 +586,26 @@ function dTitle(){
   dHt(W*0.04,H*0.1,1.4,t+4);dHt(W*0.96,H*0.9,1.3,t+2.8);
   for(let i=0;i<12;i++){const sx=((fc*0.5+i*137)%(W*0.25))+(i%2?0:W*0.75),sy=((fc*0.3+i*97)%H);X.fillStyle=`rgba(255,215,0,${0.25+Math.sin(fc*0.05+i)*0.25})`;X.beginPath();X.arc(sx,sy,1.5,0,Math.PI*2);X.fill()}
   const tx=W*0.25;
-  X.fillStyle='#1a1a2e';X.font='bold 20px sans-serif';X.textAlign='center';X.fillText('ぴよ氏の怪異街歩き',tx,H*0.16);
-  X.fillStyle='#CC2222';X.font='bold 44px sans-serif';X.fillText('「14番地」',tx,H*0.34);
-  X.fillStyle='#887755';X.font='13px sans-serif';X.fillText('― 夜道に潜む異変を見抜け ―',tx,H*0.44);
-  X.fillStyle='#776655';X.font='12px sans-serif';
-  X.fillText('画面右側タッチ → 前進',tx,H*0.58);X.fillText('画面左側タッチ → 引き返す',tx,H*0.67);X.fillText('14番地を超えればクリア！',tx,H*0.76);
-  X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('▶ タップしてスタート ◀',tx,H*0.91);
+  X.fillStyle='#1a1a2e';X.font='bold 20px sans-serif';X.textAlign='center';X.fillText('ぴよ氏の怪異街歩き',tx,H*0.12);
+  X.fillStyle='#CC2222';X.font='bold 44px sans-serif';X.fillText('「14番地」',tx,H*0.28);
+  X.fillStyle='#887755';X.font='13px sans-serif';X.fillText('― 夜道に潜む異変を見抜け ―',tx,H*0.38);
+  // Direct tap buttons
+  titleBtns.length=0;
+  const btnW=180,btnH=34;
+  const labels=[['▶ ノーマルモード','#CC2222'],['▶ チャレンジモード','#CC8822'],['🏆 ランキング','#DAA520']];
+  for(let i=0;i<3;i++){
+    const bx=tx-btnW/2,by=H*0.50+i*42-btnH/2;
+    titleBtns.push({x:bx,y:by,w:btnW,h:btnH,id:i});
+    const hover=Math.sin(fc*0.06+i)>0.8;
+    X.fillStyle=hover?'rgba(0,0,0,0.05)':'rgba(0,0,0,0.02)';
+    X.fillRect(bx,by,btnW,btnH);
+    X.strokeStyle=labels[i][1];X.lineWidth=2;X.strokeRect(bx,by,btnW,btnH);
+    X.fillStyle=labels[i][1];X.font='bold 14px sans-serif';X.textAlign='center';
+    X.fillText(labels[i][0],tx,by+btnH/2+5);
+  }
   if(imgOk){const ih=H*0.9,iw=ih*(titleImg.width/titleImg.height),ix=W*0.68-iw/2,iy=H*0.5-ih/2;X.shadowColor='rgba(0,0,0,0.12)';X.shadowBlur=18;X.shadowOffsetX=4;X.shadowOffsetY=4;X.drawImage(titleImg,ix,iy,iw,ih);X.shadowColor='transparent';X.shadowBlur=0;X.shadowOffsetX=0;X.shadowOffsetY=0}
-  X.fillStyle='#887766';X.font='11px sans-serif';X.textAlign='center';X.fillText('📲 ホーム画面に追加でアプリとしてプレイできます',W/2,H*0.96);
-  X.fillStyle='#AA9977';X.font='10px sans-serif';X.textAlign='center';X.fillText('Ver.0.35',W/2,H*0.99);
+  X.fillStyle='#887766';X.font='10px sans-serif';X.textAlign='center';X.fillText('📲 ホーム画面に追加でアプリとしてプレイできます',W/2,H*0.96);
+  X.fillStyle='#AA9977';X.font='10px sans-serif';X.fillText('Ver.0.38',W/2,H*0.99);
 }
 
 // === CLEAR ===
@@ -478,16 +620,104 @@ function dClear(){
   X.fillStyle=Math.sin(fc*0.06)>0?'#CC2222':'#DD6644';X.font='bold 16px sans-serif';X.fillText('タップしてタイトルへ',W*0.33,H*0.88);
 }
 
+// === CHALLENGE CLEAR (500番地到達) ===
+function dChallengeClear(){
+  const bg=X.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#1a0a2e');bg.addColorStop(1,'#0a0a14');X.fillStyle=bg;X.fillRect(0,0,W,H);
+  for(let i=0;i<80;i++){const sx=((fc*0.8+i*97)%W),sy=((fc*0.5+i*131)%H);X.fillStyle=['#FFD700','#FFA500','#FFEE55'][i%3];X.globalAlpha=0.5+Math.sin(fc*0.03+i)*0.3;X.beginPath();X.arc(sx,sy,1+Math.random()*2,0,Math.PI*2);X.fill()}X.globalAlpha=1;
+  const pulse=0.8+Math.sin(fc*0.05)*0.2;
+  X.save();X.shadowColor='#FFD700';X.shadowBlur=25;
+  X.fillStyle=`rgba(255,215,0,${pulse})`;X.font='bold 36px serif';X.textAlign='center';
+  X.fillText('👑 殿 堂 入 り 👑',W/2,H*0.22);
+  X.shadowBlur=0;X.restore();
+  X.fillStyle='#FFD700';X.font='bold 20px sans-serif';X.fillText(`${CHALLENGE_MAX}番地 到達！`,W/2,H*0.38);
+  X.fillStyle='#CCA866';X.font='14px sans-serif';X.fillText('伝説のぴよ氏として名を刻め！',W/2,H*0.50);
+  if(clearImgOk){const ih=H*0.5,iw=ih*(clearImg.width/clearImg.height);X.drawImage(clearImg,W*0.75-iw/2,H*0.55,iw,ih)}
+  if(showNameEntry){dNameEntry(W*0.33,H*0.60)}
+  else{const a=0.3+Math.sin(fc*0.05)*0.7;X.fillStyle=`rgba(255,215,0,${Math.max(0,a)})`;X.font='14px sans-serif';X.fillText('タップしてタイトルへ',W/2,H*0.93)}
+}
+
+// === RANKING SCREEN ===
+function dRanking(){
+  X.fillStyle='#0a0a1a';X.fillRect(0,0,W,H);
+  // Decorative border
+  X.strokeStyle='#FFD700';X.lineWidth=2;X.strokeRect(8,8,W-16,H-16);
+  X.strokeStyle='rgba(255,215,0,0.3)';X.strokeRect(12,12,W-24,H-24);
+  // Title
+  X.fillStyle='#FFD700';X.font='bold 26px serif';X.textAlign='center';
+  X.fillText('🏆 チャレンジモード ランキング 🏆',W/2,H*0.12);
+  X.strokeStyle='#FFD700';X.lineWidth=1;
+  X.beginPath();X.moveTo(W*0.15,H*0.16);X.lineTo(W*0.85,H*0.16);X.stroke();
+  if(!rankLoaded){X.fillStyle='#888';X.font='14px sans-serif';X.fillText('読み込み中...',W/2,H*0.5);return}
+  if(rankData.length===0){X.fillStyle='#888';X.font='14px sans-serif';X.fillText('まだ記録がありません',W/2,H*0.5)}
+  else{
+    const startY=H*0.22,rowH=Math.min(28,(H*0.7)/10);
+    // Header
+    X.fillStyle='#998866';X.font='bold 11px sans-serif';
+    X.textAlign='right';X.fillText('順位',W*0.2,startY);
+    X.textAlign='left';X.fillText('名前',W*0.25,startY);
+    X.textAlign='right';X.fillText('到達番地',W*0.75,startY);
+    for(let i=0;i<rankData.length&&i<10;i++){
+      const r=rankData[i],ry=startY+rowH*(i+1);
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+      const col=r.hall?'#FFD700':i<3?'#FFCC44':'#CCBBAA';
+      X.fillStyle=col;X.font=i<3?'bold 14px sans-serif':'13px sans-serif';
+      X.textAlign='right';X.fillText(`${medal}${i+1}`,W*0.2,ry);
+      X.textAlign='left';
+      const nm=r.hall?`★${r.name}★`:r.name;
+      X.fillText(nm.substring(0,12),W*0.25,ry);
+      X.textAlign='right';X.fillText(`${r.score}番地`,W*0.75,ry);
+    }
+  }
+  const a=0.3+Math.sin(fc*0.05)*0.7;
+  X.fillStyle=`rgba(255,215,0,${Math.max(0,a)})`;X.font='14px sans-serif';X.textAlign='center';
+  X.fillText('タップしてタイトルへ',W/2,H*0.93);
+}
+
+// === NAME ENTRY ===
+function dNameEntry(cx,cy){
+  X.fillStyle='rgba(0,0,0,0.7)';X.fillRect(cx-120,cy-15,240,60);
+  X.strokeStyle='#FFD700';X.lineWidth=1;X.strokeRect(cx-120,cy-15,240,60);
+  X.fillStyle='#FFD700';X.font='bold 12px sans-serif';X.textAlign='center';
+  X.fillText('ランクイン！名前を入力:',cx,cy);
+  // Name input box
+  X.fillStyle='#1a1a2e';X.fillRect(cx-80,cy+5,120,22);
+  X.strokeStyle='#FFD700';X.strokeRect(cx-80,cy+5,120,22);
+  const cursor=Math.sin(fc*0.1)>0?'|':'';
+  X.fillStyle='#FFF';X.font='14px monospace';X.textAlign='left';
+  X.fillText((nameInput+cursor).substring(0,8),cx-75,cy+22);
+  // OK button
+  X.fillStyle=nameInput.length>0?'#CC2222':'#666';
+  X.fillRect(cx+50,cy+5,50,22);
+  X.fillStyle='#FFF';X.font='bold 12px sans-serif';X.textAlign='center';
+  X.fillText('決定',cx+75,cy+20);
+}
+
 // === GAME LOGIC ===
 const BACK_X=-750;// back gate position relative to bsX
 function sB(){bsX=0;pX=bsX+120;camX=pX-W*0.3;window._efStart=0}
 function sM(t,s){mTx=t;mSb=s||'';mTm=90}
 function update(){
-  fc++;if(gs==='dying'){deathTimer++;if(deathTimer===DEATH_BGM_DELAY){playBgm(bgmDeath)}if(deathTimer>=DEATH_FADE){gs='gameover';bL=false;bR=false}return}
+  fc++;if(gs==='dying'){deathTimer++;if(deathTimer===DEATH_BGM_DELAY){playBgm(bgmDeath)}if(deathTimer>=DEATH_FADE){
+    if(gameMode==='challenge'){challengeScore=cB;showNameEntry=isRankIn(challengeScore);nameInput='';nameInputActive=showNameEntry}
+    gs='gameover';bL=false;bR=false}return}
   if(gs==='gameover'){if(deathTimer<DEATH_BGM_DELAY){deathTimer++;if(deathTimer===DEATH_BGM_DELAY){playBgm(bgmDeath)}}return}
+  if(gs==='challenge_clear')return;
+  if(gs==='paused')return;
   if(gs!=='playing')return;
   if(mTm>0)mTm--;
-  if(tTm>0){tTm--;if(tTm===0){if(tTp==='a'){cB++;if(cB>14){gs='clear';playBgm(bgmGoal);return}genA();sB();sM(`${cB}番地`)}else{cB=1;genA();sB();sM('1番地に戻された…','異変の判断を間違えた')}}return}
+  if(tTm>0){tTm--;if(tTm===0){if(tTp==='a'){
+    cB++;
+    if(gameMode==='normal'&&cB>14){gs='clear';playBgm(bgmGoal);return}
+    if(gameMode==='challenge'&&cB>CHALLENGE_MAX){gs='challenge_clear';challengeScore=CHALLENGE_MAX;showNameEntry=true;nameInput='';nameInputActive=true;playBgm(bgmGoal);return}
+    genA();sB();sM(`${cB}番地`)
+  }else{
+    if(gameMode==='challenge'){
+      // Challenge mode: 1 miss = game over
+      challengeScore=cB;gs='dying';deathTimer=0;bL=false;bR=false;pMov=false;
+      stopBgm();playSe(seMissSrc);return
+    }
+    cB=1;genA();sB();sM('1番地に戻された…','異変の判断を間違えた')
+  }}return}
   if(skT>0){skT--;skX=(Math.random()-0.5)*skT*0.7;skY=(Math.random()-0.5)*skT*0.4}else{skX=0;skY=0}
   const sp=4;pMov=false;
   if(bR){pX+=sp;pDir=1;pMov=true}
@@ -569,26 +799,39 @@ function dGameOver(){
   X.restore();
   // Sub text
   X.fillStyle='#882222';X.font='16px sans-serif';X.textAlign='center';
-  X.fillText(`${cB}番地でぴよ氏は力尽きた…`,W/2,H*0.52);
+  if(gameMode==='challenge'){
+    X.fillText(`${challengeScore}番地でぴよ氏は力尽きた…`,W/2,H*0.50);
+  }else{
+    X.fillText(`${cB}番地でぴよ氏は力尽きた…`,W/2,H*0.50);
+  }
   // Character fallen - piyo02
-  if(deathImgOk){
-    X.globalAlpha=0.7;
-    const ih=H*0.45,iw=ih*(deathImg.width/deathImg.height);
-    X.drawImage(deathImg,W/2-iw/2,H*0.55,iw,ih);
-    X.globalAlpha=1;
+  if(gameMode==='challenge'&&showNameEntry){
+    dNameEntry(W/2,H*0.62);
+  }else{
+    if(deathImgOk){
+      X.globalAlpha=0.7;
+      const ih=H*0.45,iw=ih*(deathImg.width/deathImg.height);
+      X.drawImage(deathImg,W/2-iw/2,H*0.55,iw,ih);
+      X.globalAlpha=1;
+    }
   }
   // Tap to continue
-  const tapA=0.3+Math.sin(fc*0.05)*0.7;
-  X.fillStyle=`rgba(150,80,80,${Math.max(0,tapA)})`;
-  X.font='14px sans-serif';X.textAlign='center';
-  X.fillText('タップしてタイトルへ',W/2,H*0.93);
+  if(!showNameEntry){
+    const tapA=0.3+Math.sin(fc*0.05)*0.7;
+    X.fillStyle=`rgba(150,80,80,${Math.max(0,tapA)})`;
+    X.font='14px sans-serif';X.textAlign='center';
+    X.fillText('タップしてタイトルへ',W/2,H*0.93);
+  }
 }
 
 function render(){
   X.clearRect(0,0,W,H);
   if(gs==='tap'){dTap();return}
   if(gs==='title'){dTitle();return}if(gs==='clear'){dClear();return}
+  if(gs==='ranking'){dRanking();return}
+  if(gs==='challenge_clear'){dChallengeClear();return}
   if(gs==='gameover'){dGameOver();return}
+  if(gs==='paused'){dPause();return}
   X.save();X.translate(skX,skY);
   dSky();dBld(0,0.12,H*0.22,'#060608','#18150A');dBld(1,0.3,H*0.17,'#0A0A10','#1A1708');
   dPol();dGnd();dLmp();dSign();dBackGate();dGate();dAnom();
@@ -607,15 +850,137 @@ function loop(){update();render();requestAnimationFrame(loop)}
 // === INPUT ===
 // iOS PWA: resume AudioContext on every user interaction
 function touchResume(){if(actx&&(actx.state==='suspended'||actx.state==='interrupted'))actx.resume().catch(()=>{});}
-// iOS PWA: recover AudioContext when app returns from background
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)touchResume();});
-function hS(e){e.preventDefault();touchResume();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle);return}if(gs==='dying')return;const rc=C.getBoundingClientRect(),ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];for(let t of ts){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
+
+function startGame(mode){
+  gameMode=mode;cB=1;genA();sB();
+  gs='playing';playBgm(bgmStage);
+  if(mode==='challenge')sM('1番地','チャレンジ開始！');
+  else sM('1番地','夜道を進め…');
+}
+
+function handleTitleTap(cx,cy){
+  for(const b of titleBtns){
+    if(cx>=b.x&&cx<=b.x+b.w&&cy>=b.y&&cy<=b.y+b.h){
+      if(b.id===0){startGame('normal')}
+      else if(b.id===1){startGame('challenge')}
+      else if(b.id===2){gs='ranking';playBgm(bgmRanking);loadRanking()}
+      return true;
+    }
+  }
+  return false;
+}
+
+function handleNameOK(){
+  if(nameInput.length>0&&showNameEntry){
+    const sc=gs==='challenge_clear'?CHALLENGE_MAX:challengeScore;
+    saveRanking(nameInput,sc);
+    showNameEntry=false;nameInputActive=false;
+  }
+}
+
+function hS(e){
+  e.preventDefault();touchResume();
+  if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}
+  if(gs==='title'){
+    const rc=C.getBoundingClientRect();
+    const ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];
+    const cx=(ts[0].clientX-rc.left)*(W/rc.width);
+    const cy=(ts[0].clientY-rc.top)*(H/rc.height);
+    handleTitleTap(cx,cy);
+    return;
+  }
+  if(gs==='ranking'){gs='title';playBgm(bgmTitle);return}
+  if(gs==='clear'){gs='title';playBgm(bgmTitle);return}
+  if(gs==='challenge_clear'){
+    if(showNameEntry){
+      const rc=C.getBoundingClientRect();const ts=e.touches||[{clientX:e.clientX}];
+      const x=ts[0].clientX-rc.left;
+      if(x>W*0.33+50&&x<W*0.33+100){handleNameOK();return}
+      // Tap on input area - open keyboard
+      if(nameInputActive)openNameInput();
+      return;
+    }
+    gs='title';playBgm(bgmTitle);return;
+  }
+  if(gs==='gameover'){
+    if(showNameEntry){
+      const rc=C.getBoundingClientRect();const ts=e.touches||[{clientX:e.clientX}];
+      const x=ts[0].clientX-rc.left;
+      if(x>W/2+50&&x<W/2+100){handleNameOK();return}
+      if(nameInputActive)openNameInput();
+      return;
+    }
+    gs='title';playBgm(bgmTitle);return;
+  }
+  if(gs==='dying')return;
+  const rc=C.getBoundingClientRect(),ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];
+  const cx0=(ts[0].clientX-rc.left)*(W/rc.width);
+  const cy0=(ts[0].clientY-rc.top)*(H/rc.height);
+  if(gs==='paused'){handlePauseTap(cx0,cy0);return}
+  if(gs==='playing'&&hitPauseBtn(cx0,cy0)){gs='paused';bL=false;bR=false;return}
+  for(let t of ts){if(((t.clientX-rc.left)*(W/rc.width))<W*0.4)bL=true;else bR=true}
+}
 function uT(e){e.preventDefault();if(gs!=='playing')return;bL=false;bR=false;const rc=C.getBoundingClientRect();if(e.touches)for(let t of e.touches){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
 function hE(e){e.preventDefault();if(e.touches&&e.touches.length>0)uT(e);else{bL=false;bR=false}}
 C.addEventListener('touchstart',hS,{passive:false});C.addEventListener('touchmove',uT,{passive:false});C.addEventListener('touchend',hE,{passive:false});C.addEventListener('touchcancel',hE,{passive:false});
-C.addEventListener('mousedown',(e)=>{e.preventDefault();touchResume();if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…');return}if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle);return}if(gs==='dying')return;if(e.clientX<W*0.4)bL=true;else bR=true});
+
+C.addEventListener('mousedown',(e)=>{
+  e.preventDefault();touchResume();
+  if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}
+  if(gs==='title'){const rc=C.getBoundingClientRect();const cx=(e.clientX-rc.left)*(W/rc.width);const cy=(e.clientY-rc.top)*(H/rc.height);handleTitleTap(cx,cy);return}
+  if(gs==='ranking'){gs='title';playBgm(bgmTitle);return}
+  if(gs==='clear'){gs='title';playBgm(bgmTitle);return}
+  if(gs==='challenge_clear'){
+    if(showNameEntry){if(e.clientX>W*0.33+50)handleNameOK();else openNameInput();return}
+    gs='title';playBgm(bgmTitle);return;
+  }
+  if(gs==='gameover'){
+    if(showNameEntry){if(e.clientX>W/2+50)handleNameOK();else openNameInput();return}
+    gs='title';playBgm(bgmTitle);return;
+  }
+  if(gs==='dying')return;
+  const rc2=C.getBoundingClientRect();
+  const mcx=(e.clientX-rc2.left)*(W/rc2.width);
+  const mcy=(e.clientY-rc2.top)*(H/rc2.height);
+  if(gs==='paused'){handlePauseTap(mcx,mcy);return}
+  if(gs==='playing'&&hitPauseBtn(mcx,mcy)){gs='paused';bL=false;bR=false;return}
+  if(mcx<W*0.4)bL=true;else bR=true;
+});
 C.addEventListener('mouseup',()=>{bL=false;bR=false});C.addEventListener('mouseleave',()=>{bL=false;bR=false});
-document.addEventListener('keydown',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=true;if(e.key==='ArrowLeft'||e.key==='a')bL=true;if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle)}else if(gs==='title'){gs='playing';playBgm(bgmStage);cB=1;genA();sB();sM('1番地','夜道を進め…')}else if(gs==='clear'||gs==='gameover'){gs='title';playBgm(bgmTitle)}});
+
+// Hidden input for mobile keyboard
+const nameEl=document.createElement('input');nameEl.type='text';nameEl.maxLength=8;
+nameEl.style.cssText='position:fixed;top:-100px;left:0;opacity:0;font-size:16px;';
+document.body.appendChild(nameEl);
+nameEl.addEventListener('input',()=>{nameInput=nameEl.value.substring(0,8)});
+nameEl.addEventListener('blur',()=>{nameInputActive=false});
+function openNameInput(){nameEl.value=nameInput;nameEl.focus();nameInputActive=true}
+
+document.addEventListener('keydown',(e)=>{
+  if(nameInputActive){
+    if(e.key==='Enter')handleNameOK();
+    return;
+  }
+  if(e.key==='ArrowRight'||e.key==='d')bR=true;
+  if(e.key==='ArrowLeft'||e.key==='a')bL=true;
+  if(gs==='playing'&&(e.key==='Escape'||e.key==='p')){gs='paused';bL=false;bR=false;return}
+  if(gs==='paused'){
+    if(e.key==='Escape'||e.key==='p'||e.key==='Enter'){gs='playing';return}
+    if(e.key==='q'){gs='title';playBgm(bgmTitle);return}
+    return;
+  }
+  if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle)}
+  else if(gs==='title'){
+    if(e.key==='1'){startGame('normal')}
+    else if(e.key==='2'){startGame('challenge')}
+    else if(e.key==='3'){gs='ranking';playBgm(bgmRanking);loadRanking()}
+  }
+  else if(gs==='ranking'){gs='title';playBgm(bgmTitle)}
+  else if(gs==='clear'||gs==='challenge_clear'||gs==='gameover'){
+    if(!showNameEntry){gs='title';playBgm(bgmTitle)}
+  }
+});
 document.addEventListener('keyup',(e)=>{if(e.key==='ArrowRight'||e.key==='d')bR=false;if(e.key==='ArrowLeft'||e.key==='a')bL=false});
 loop();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
