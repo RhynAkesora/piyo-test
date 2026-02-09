@@ -199,7 +199,7 @@ function playSe(id){
 
 let gs='tap',cB=1,camX=0,pX=100,pDir=1,pMov=false,pFr=0,pAT=0,fc=0;
 let hasA=false,aT=0,tTm=0,tTp='',mTm=0,mTx='',mSb='';
-let bsX=0;let BW=2100;const BW_NORMAL=2100;const BW_SHORT=1890;const GH=0.76;
+let bsX=0;let BW=2100;const BW_NORMAL=2100;const BW_SHORT=1260;const GH=0.76;
 let bL=false,bR=false,skT=0,skX=0,skY=0;
 let runnerX=0,runnerActive=false;// runnerPiyo state
 let stars=[];for(let i=0;i<120;i++)stars.push({x:Math.random()*6000,y:Math.random()*0.38,b:Math.random(),s:0.5+Math.random()*1.5});
@@ -484,11 +484,11 @@ function dAnom(){
 
   // earthquake - screen shakes periodically with SE
   if(a==='earthquake'){
-    const qCycle=120;const qPhase=fc%qCycle;
-    if(qPhase<60){
-      const intensity=qPhase<30?(qPhase/30)*8:(1-(qPhase-30)/30)*8;
-      skX=Math.sin(fc*1.3)*(intensity)+((Math.random()-0.5)*intensity*0.5);
-      skY=Math.cos(fc*1.7)*(intensity*0.6)+((Math.random()-0.5)*intensity*0.3);
+    const qCycle=90;const qPhase=fc%qCycle;
+    if(qPhase<70){
+      const intensity=qPhase<20?(qPhase/20)*22:(1-(qPhase-20)/50)*22;
+      skX=Math.sin(fc*2.5)*(intensity)+((Math.random()-0.5)*intensity*0.8);
+      skY=Math.cos(fc*3.1)*(intensity*0.7)+((Math.random()-0.5)*intensity*0.6);
     }else{skX=0;skY=0}
     if(qPhase===0)playSe('quake');
   }
@@ -794,7 +794,7 @@ function update(){
     }
     cB=1;genA();sB();sM('1番地に戻された…','異変の判断を間違えた')
   }}return}
-  if(skT>0){skT--;skX=(Math.random()-0.5)*skT*0.7;skY=(Math.random()-0.5)*skT*0.4}else{skX=0;skY=0}
+  if(skT>0){skT--;skX=(Math.random()-0.5)*skT*0.7;skY=(Math.random()-0.5)*skT*0.4}else if(!(hasA&&AN[aT]==='earthquake')){skX=0;skY=0}
   const sp=4;pMov=false;
   if(bR){pX+=sp;pDir=1;pMov=true}
   if(bL){pX-=sp;pDir=-1;pMov=true}
