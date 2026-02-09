@@ -1121,7 +1121,7 @@ function uT(e){e.preventDefault();
   }
   if(gs!=='playing')return;bL=false;bR=false;const rc=C.getBoundingClientRect();if(e.touches)for(let t of e.touches){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
 function hE(e){e.preventDefault();
-  if(gs==='hints'){const wasDrag=hintsTotalDrag>15;hintsDragging=false;if(!wasDrag&&(!e.touches||e.touches.length===0)){gs='title'}return}
+  if(gs==='hints'){const wasDrag=hintsTotalDrag>15;hintsDragging=false;if(!wasDrag){gs='title'}return}
   if(e.touches&&e.touches.length>0)uT(e);else{bL=false;bR=false}}
 C.addEventListener('touchstart',hS,{passive:false});C.addEventListener('touchmove',uT,{passive:false});C.addEventListener('touchend',hE,{passive:false});C.addEventListener('touchcancel',hE,{passive:false});
   
