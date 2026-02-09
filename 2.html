@@ -668,9 +668,9 @@ function dTitle(){
   // Direct tap buttons
   titleBtns.length=0;
   const btnW=180,btnH=34;
-  const labels=[['▶ ノーマルモード','#CC2222'],['▶ チャレンジモード','#CC8822'],['🏆 ランキング','#DAA520']];
-  for(let i=0;i<3;i++){
-    const bx=tx-btnW/2,by=H*0.50+i*42-btnH/2;
+  const labels=[['▶ ノーマルモード','#CC2222'],['▶ チャレンジモード','#CC8822'],['🏆 ランキング','#DAA520'],['📖 ヒント（異変一覧）','#66AACC']];
+  for(let i=0;i<4;i++){
+    const bx=tx-btnW/2,by=H*0.46+i*38-btnH/2;
     titleBtns.push({x:bx,y:by,w:btnW,h:btnH,id:i});
     const hover=Math.sin(fc*0.06+i)>0.8;
     X.fillStyle=hover?'rgba(0,0,0,0.05)':'rgba(0,0,0,0.02)';
@@ -747,6 +747,100 @@ function dRanking(){
   const a=0.3+Math.sin(fc*0.05)*0.7;
   X.fillStyle=`rgba(255,215,0,${Math.max(0,a)})`;X.font='14px sans-serif';X.textAlign='center';
   X.fillText('タップしてタイトルへ',W/2,H*0.93);
+}
+
+// === HINTS SCREEN ===
+let hintsScrollY=0;
+let hintsTouchStartY=0;
+let hintsDragging=false;
+const HINTS_DATA=[
+  ['街灯の明滅','街灯の光が不規則に点滅している。'],
+  ['赤い空','夜空が不気味な赤色に染まっている。'],
+  ['余分な電柱','道の途中に、あるはずのない電柱が1本立っている。赤い光を放っている。'],
+  ['浮遊する赤い目','空中に複数の赤い目玉が浮かんでいる。'],
+  ['巨大な赤い月','月が異常に大きく、赤く輝いている。'],
+  ['赤い地面','地面の色がいつもより赤みがかっている。'],
+  ['青い地面','地面が青みがかった色になっている。'],
+  ['流れ星','空を流れ星が横切っていく。'],
+  ['逆さの看板','道沿いの番地看板が上下逆さまになっている。'],
+  ['天井からの血','画面上部から赤い雫が垂れ落ちている。'],
+  ['幽霊','半透明の幽霊が道の真ん中に浮遊している。近づくと死亡する。'],
+  ['睨んでいる男性','道の真ん中に睨んでいる男性が立っている。近づくと死亡する。'],
+  ['看板が2つ','同じ番地の看板が2つ設置されている。'],
+  ['星が消えた','夜空から星が一切消えている。'],
+  ['不自然な霧','道に薄い霧がかかっている。'],
+  ['地面の亀裂','地面に大きな亀裂が走り、赤い光が漏れている。'],
+  ['看板の目','番地看板に目玉が付いており、まばたきしている。'],
+  ['影の手','地面から黒い手が何本も伸びてきている。'],
+  ['逆さの雨','雨が下から上へ向かって降っている。'],
+  ['街灯が多すぎる','街灯の数が異常に多い。'],
+  ['鼓動','画面全体が心臓の鼓動のように赤く脈動する。'],
+  ['フード男','フードを被った不気味な人物が道に立っている。近づくと死亡する。'],
+  ['号泣する占い師','道の真ん中で占い師が号泣している。近づくと死亡する。'],
+  ['地震','画面が激しく揺れ、地鳴りが聞こえる。'],
+  ['東京タワー','遠くに東京タワーのシルエットが見える。ここは東京ではない。'],
+  ['月の異変','月の表面に不気味な顔のような模様が浮かんでいる。'],
+  ['邪悪な霧','右側から赤黒い霧が迫ってくる。飲み込まれると死亡する。'],
+  ['白い街灯','街灯の光がいつもの暖色ではなく、冷たい白色になっている。'],
+  ['オレンジの街灯','街灯の光がいつもより濃いオレンジ色になっている。'],
+  ['赤い星','夜空にいくつか赤い星が見える。'],
+  ['ドッペルゲンガーのぴよ氏','右側からもう一人のぴよ氏が走ってくる。接触すると死亡する。'],
+  ['点線の間隔','道路の中央線の点線の間隔がいつもより広い。'],
+  ['背の高い街灯','街灯の高さがいつもより高い。'],
+  ['短い道','NEXTの扉までの距離がいつもより短い。'],
+  ['石ころ','道路に小さな石ころが落ちている。'],
+];
+function dHints(){
+  X.fillStyle='#0a0a1a';X.fillRect(0,0,W,H);
+  X.strokeStyle='#66AACC';X.lineWidth=2;X.strokeRect(8,8,W-16,H-16);
+  X.strokeStyle='rgba(102,170,204,0.3)';X.strokeRect(12,12,W-24,H-24);
+  X.fillStyle='#66AACC';X.font='bold 22px serif';X.textAlign='center';
+  X.fillText('📖 ヒント（異変一覧）',W/2,H*0.10);
+  X.strokeStyle='#66AACC';X.lineWidth=1;
+  X.beginPath();X.moveTo(W*0.15,H*0.13);X.lineTo(W*0.85,H*0.13);X.stroke();
+  X.fillStyle='rgba(150,180,200,0.6)';X.font='10px sans-serif';X.textAlign='center';
+  X.fillText('※ 死亡マークの異変は近づくと即死します',W/2,H*0.17);
+  // Scrollable list area
+  const listTop=H*0.20,listBot=H*0.88;
+  const listH=listBot-listTop;
+  const rowH=42;
+  const totalH=HINTS_DATA.length*rowH;
+  const maxScroll=Math.max(0,totalH-listH);
+  hintsScrollY=Math.max(0,Math.min(hintsScrollY,maxScroll));
+  X.save();
+  X.beginPath();X.rect(0,listTop,W,listH);X.clip();
+  for(let i=0;i<HINTS_DATA.length;i++){
+    const ry=listTop+i*rowH-hintsScrollY;
+    if(ry>listBot+10||ry+rowH<listTop-10)continue;
+    const d=HINTS_DATA[i];
+    const isDeath=d[1].indexOf('死亡')>=0||d[1].indexOf('即死')>=0;
+    // Row background
+    X.fillStyle=i%2===0?'rgba(255,255,255,0.03)':'transparent';
+    X.fillRect(W*0.08,ry,W*0.84,rowH);
+    // Number
+    X.fillStyle='#556677';X.font='bold 10px monospace';X.textAlign='right';
+    X.fillText(`${i+1}.`,W*0.12,ry+16);
+    // Name
+    X.fillStyle=isDeath?'#FF6666':'#CCDDEE';X.font='bold 13px sans-serif';X.textAlign='left';
+    X.fillText((isDeath?'💀 ':'')+d[0],W*0.14,ry+16);
+    // Description
+    X.fillStyle='#8899AA';X.font='11px sans-serif';X.textAlign='left';
+    X.fillText(d[1],W*0.14,ry+32);
+    // Separator
+    X.fillStyle='rgba(102,170,204,0.1)';X.fillRect(W*0.1,ry+rowH-1,W*0.8,1);
+  }
+  X.restore();
+  // Scroll indicator
+  if(totalH>listH){
+    const barH=Math.max(20,listH*(listH/totalH));
+    const barY=listTop+(hintsScrollY/maxScroll)*(listH-barH);
+    X.fillStyle='rgba(102,170,204,0.3)';
+    X.fillRect(W*0.95,barY,4,barH);
+  }
+  // Footer
+  const a=0.3+Math.sin(fc*0.05)*0.7;
+  X.fillStyle=`rgba(102,170,204,${Math.max(0,a)})`;X.font='14px sans-serif';X.textAlign='center';
+  X.fillText('タップしてタイトルへ',W/2,H*0.95);
 }
 
 // === NAME ENTRY ===
@@ -913,6 +1007,7 @@ function render(){
   if(gs==='tap'){dTap();return}
   if(gs==='title'){dTitle();return}if(gs==='clear'){dClear();return}
   if(gs==='ranking'){dRanking();return}
+  if(gs==='hints'){dHints();return}
   if(gs==='challenge_clear'){dChallengeClear();return}
   if(gs==='gameover'){dGameOver();return}
   if(gs==='paused'){dPause();return}
@@ -952,6 +1047,7 @@ function handleTitleTap(cx,cy){
       if(b.id===0){startGame('normal')}
       else if(b.id===1){startGame('challenge')}
       else if(b.id===2){gs='ranking';playBgm(bgmRanking);loadRanking()}
+      else if(b.id===3){gs='hints';hintsScrollY=0}
       return true;
     }
   }
@@ -978,6 +1074,12 @@ function hS(e){
     return;
   }
   if(gs==='ranking'){gs='title';playBgm(bgmTitle);return}
+  if(gs==='hints'){
+    const rc=C.getBoundingClientRect();
+    const ts=e.touches||[{clientX:e.clientX,clientY:e.clientY}];
+    hintsTouchStartY=(ts[0].clientY-rc.top)*(H/rc.height);
+    hintsDragging=true;hintsTotalDrag=0;return;
+  }
   if(gs==='clear'){gs='title';playBgm(bgmTitle);return}
   if(gs==='challenge_clear'){
     if(showNameEntry){
@@ -1008,15 +1110,27 @@ function hS(e){
   if(gs==='playing'&&hitPauseBtn(cx0,cy0)){gs='paused';bL=false;bR=false;return}
   for(let t of ts){if(((t.clientX-rc.left)*(W/rc.width))<W*0.4)bL=true;else bR=true}
 }
-function uT(e){e.preventDefault();if(gs!=='playing')return;bL=false;bR=false;const rc=C.getBoundingClientRect();if(e.touches)for(let t of e.touches){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
-function hE(e){e.preventDefault();if(e.touches&&e.touches.length>0)uT(e);else{bL=false;bR=false}}
+function uT(e){e.preventDefault();
+  if(gs==='hints'&&hintsDragging){
+    const rc=C.getBoundingClientRect();
+    const ty=(e.touches[0].clientY-rc.top)*(H/rc.height);
+    const dy=hintsTouchStartY-ty;
+    hintsScrollY+=dy;
+    hintsTotalDrag+=Math.abs(dy);
+    hintsTouchStartY=ty;return;
+  }
+  if(gs!=='playing')return;bL=false;bR=false;const rc=C.getBoundingClientRect();if(e.touches)for(let t of e.touches){if((t.clientX-rc.left)<W*0.4)bL=true;else bR=true}}
+function hE(e){e.preventDefault();
+  if(gs==='hints'){const wasDrag=hintsTotalDrag>15;hintsDragging=false;if(!wasDrag&&(!e.touches||e.touches.length===0)){gs='title'}return}
+  if(e.touches&&e.touches.length>0)uT(e);else{bL=false;bR=false}}
 C.addEventListener('touchstart',hS,{passive:false});C.addEventListener('touchmove',uT,{passive:false});C.addEventListener('touchend',hE,{passive:false});C.addEventListener('touchcancel',hE,{passive:false});
-
+  
 C.addEventListener('mousedown',(e)=>{
   e.preventDefault();touchResume();
   if(gs==='tap'){unlockAudio();gs='title';playBgm(bgmTitle);return}
   if(gs==='title'){const rc=C.getBoundingClientRect();const cx=(e.clientX-rc.left)*(W/rc.width);const cy=(e.clientY-rc.top)*(H/rc.height);handleTitleTap(cx,cy);return}
   if(gs==='ranking'){gs='title';playBgm(bgmTitle);return}
+  if(gs==='hints'){gs='title';return}
   if(gs==='clear'){gs='title';playBgm(bgmTitle);return}
   if(gs==='challenge_clear'){
     if(showNameEntry){if(e.clientX>W*0.33+50)handleNameOK();else openNameInput();return}
@@ -1062,8 +1176,10 @@ document.addEventListener('keydown',(e)=>{
     if(e.key==='1'){startGame('normal')}
     else if(e.key==='2'){startGame('challenge')}
     else if(e.key==='3'){gs='ranking';playBgm(bgmRanking);loadRanking()}
+    else if(e.key==='4'){gs='hints';hintsScrollY=0}
   }
   else if(gs==='ranking'){gs='title';playBgm(bgmTitle)}
+  else if(gs==='hints'){gs='title'}
   else if(gs==='clear'||gs==='challenge_clear'||gs==='gameover'){
     if(!showNameEntry){gs='title';playBgm(bgmTitle)}
   }
